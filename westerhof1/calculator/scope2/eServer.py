@@ -19,10 +19,6 @@ def calculate(hourlyDf : DataFrame):
     dramAccessed = 1.828e-4
     diskDataMoved = 1.365e-6
 
-    print(hourlyDf)
-    print(hourlyDf.columns)
-    print(hourlyDf['amount_CPU_CLK_UNHALTED'])
-
     eServer = (idlePower + cpuUtil * hourlyDf['amount_CPU_CLK_UNHALTED'] + 
         cacheDataMoved * (hourlyDf['amount_INSTRUCTION_CACHE_FETCHES'] +hourlyDf['amount_DATA_CACHE_FETCHES']) +
         dramAccessed * hourlyDf['amount_DRAM_ACCESSES'] +
