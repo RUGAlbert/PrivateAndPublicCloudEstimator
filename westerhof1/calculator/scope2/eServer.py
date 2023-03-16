@@ -10,6 +10,8 @@ from sklearn import linear_model
 def calculateCoefficients(hourlyDf: DataFrame):
     regr = linear_model.LinearRegression()
     regr.fit(hourlyDf[['amount_CPU_CLK_UNHALTED', 'cache_data_moved', 'amount_DRAM_ACCESSES', 'disk_data_moved']], hourlyDf['power_consumed'])
+    print(regr.intercept_)
+    print(regr.coef_)
 
 
 def calculate(hourlyDf : DataFrame):
@@ -19,7 +21,7 @@ def calculate(hourlyDf : DataFrame):
     hourlyDf['cache_data_moved'] = hourlyDf['amount_INSTRUCTION_CACHE_FETCHES'] +hourlyDf['amount_DATA_CACHE_FETCHES']
     hourlyDf['disk_data_moved'] = hourlyDf['disk_bytes_read'] + hourlyDf['disk_bytes_written']
 
-
+    calculateCoefficients(hourlyDf)
     
     # https://stackoverflow.com/questions/54754880/linear-regression-over-two-variables-in-a-pandas-dataframe
     # Do this later
