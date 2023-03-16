@@ -21,10 +21,19 @@ def calculateEnergy(hourlyDf : DataFrame, coolingDf : DataFrame, miscDf : DataFr
     energyDf.loc[:,'scope3'] = energyDC * r
 
     energyDf['total'] = energyDf['scope1'] + energyDf['scope2'] + energyDf['scope3']
-    print(energyDf)
 
     return energyDf
+
+def calculateCarbonIntensity(energyDf : DataFrame):
+    carbonDf = energyDf[['date']].copy()
+    ci = 1.4
+    carbonDf['emmisions'] = energyDf['total'] * ci
+    return carbonDf
 
 def calculate(hourlyDf : DataFrame, coolingDf : DataFrame, miscDf : DataFrame, cuserDf : DataFrame):
 
     energyDf = calculateEnergy(hourlyDf, coolingDf, miscDf, cuserDf)
+    carbonDf = calculateCarbonIntensity(energyDf)
+    print(energyDf)
+    print(carbonDf)
+    return carbonDf
