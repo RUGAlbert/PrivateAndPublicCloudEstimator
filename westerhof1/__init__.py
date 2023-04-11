@@ -8,6 +8,6 @@ from os import path
 
 from .calculator import calculate
 
-def start(hourlyDf : DataFrame, coolingDf : DataFrame, miscDf : DataFrame, cuserDf : DataFrame):
+def start(serverDf : DataFrame, networkDf : DataFrame, datacenterDf : DataFrame, cuserDf : DataFrame):
 
-    calculate(hourlyDf, coolingDf, miscDf, cuserDf)
+    calculate(serverDf, networkDf, datacenterDf, cuserDf)
