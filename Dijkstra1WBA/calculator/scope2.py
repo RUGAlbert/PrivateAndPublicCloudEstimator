@@ -30,6 +30,6 @@ def calculate(rawDataDf : DataFrame, serverInfo : dict) -> DataFrame:
     result['eNetwork'] = np.random.randint(5000,30000,size=result.shape[0]) * Config.WHPERBYTE
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
 
-    result['scope2'] = result['eServer'] + result['eNetwork'] + result['eCooling']
+    result['scope2E'] = result['eServer'] + result['eNetwork'] + result['eCooling']
 
     return result
