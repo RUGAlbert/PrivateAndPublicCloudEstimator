@@ -3,7 +3,7 @@ from . import scope1, scope2, scope3
 from ..config import Config
 
 def calculateMultitenancyShare(serverInfo : dict, monthlyPowerConsumption : float) -> float:
-    return monthlyPowerConsumption / serverInfo['DCTotalEnergyUsage']
+    return (monthlyPowerConsumption * Config.CARBONINTENSITY) / serverInfo['DCEmissions']['scope2']
 
 def calculate(serverDf : DataFrame, serverInfo : dict) -> DataFrame:
     # scopes energy
@@ -17,5 +17,5 @@ def calculate(serverDf : DataFrame, serverInfo : dict) -> DataFrame:
     result['scope2'] = result['scope2E'] * Config.CARBONINTENSITY
     result['scope3'] = scope3.calculate(serverInfo, multitenancyShare)
     result['TCFP'] = result['scope1'] + result['scope2'] + result['scope3']
-    
+
     return result
