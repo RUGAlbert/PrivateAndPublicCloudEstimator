@@ -26,10 +26,21 @@ def wattToEServer(rawServerDf : DataFrame) -> DataFrame:
 def calculate(rawDataDf : DataFrame, serverInfo : dict) -> DataFrame:
 
     result = wattToEServer(rawDataDf)
+    result['eServerStatic'] = 0.8 * result['eServer']
+    result['eServerDynamic'] = 0.2 * result['eServer']
+
     #include real calculation
-    result['eNetwork'] = np.random.randint(5000,30000,size=result.shape[0]) * Config.WHPERBYTE
+    result['eNetwork'] = np.random.randint(50000000,300000000,size=result.shape[0]) * Config.WHPERBYTE
+    result['eNetworkStatic'] = Config.MU * result['eNetwork']
+    result['eNetworkDynamic'] = (1 - Config.MU) * result['eNetwork']
+
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
+    result['nu'] = (result['eServerStatic'] + result['eNetworkStatic']) / (result['eServer'] + result['eNetwork'])
+    result['eCoolingStatic'] = result['nu'] * result['eCooling']
+    result['eCoolingDynamic'] = (1 - result['nu']) * result['eCooling']
 
     result['scope2E'] = result['eServer'] + result['eNetwork'] + result['eCooling']
+    result['scope2ELower'] = Config.GAMMA_LOWER * (result['eServerStatic'] + result['eNetworkStatic'] + result['eCoolingStatic']) + Config.ZETA_LOWER * (result['eServerDynamic'] + result['eNetworkDynamic'] + result['eCoolingDynamic'])
+    result['scope2EUpper'] = Config.GAMA_UPPER * (result['eServerStatic'] + result['eNetworkStatic'] + result['eCoolingStatic']) + Config.ZETA_UPPER * (result['eServerDynamic'] + result['eNetworkDynamic'] + result['eCoolingDynamic'])
 
     return result

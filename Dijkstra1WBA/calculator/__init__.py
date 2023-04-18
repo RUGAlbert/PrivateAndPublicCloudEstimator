@@ -14,8 +14,12 @@ def calculate(serverDf : DataFrame, serverInfo : dict) -> DataFrame:
     #calculate scope 2 and scope 3 emissions
     multitenancyShare = calculateMultitenancyShare(serverInfo, monthlyPowerConsumption)
     result['scope1'] = scope1.calculate(serverInfo, multitenancyShare)
-    result['scope2'] = result['scope2E'] * Config.CARBONINTENSITY
+    result['scope2Lower'] = result['scope2ELower'] * Config.CARBONINTENSITY
+    result['scope2Upper'] = result['scope2EUpper'] * Config.CARBONINTENSITY
     result['scope3'] = scope3.calculate(serverInfo, multitenancyShare)
-    result['TCFP'] = result['scope1'] + result['scope2'] + result['scope3']
+    result['TCFPLower'] = result['scope1'] + result['scope2Lower'] + result['scope3']
+    result['TCFPUpper'] = result['scope1'] + result['scope2Upper'] + result['scope3']
 
+    
+    result = result[['eServerStatic', 'eNetworkStatic', 'eCoolingStatic', 'eServerDynamic', 'eNetworkDynamic', 'eCoolingDynamic', 'scope1', 'scope2Lower', 'scope2Upper', 'scope3', 'TCFPLower', 'TCFPUpper']]
     return result
