@@ -10,8 +10,8 @@ with open(path.join('data', 'weekData', 'serverInfo.json'), encoding='utf-8') as
     data = json.load(f)
 
 print(data)
-# start(data)
-calculateParametersOfServer(data['servers'][0])
+start(data)
+# calculateParametersOfServer(data['servers'][3])
 
 # dataPath = path.join('data', 'weekData')
 # serverEnergyDf = pd.read_csv(path.join(dataPath, 'Power_HostUtilStat-EPODQLON02-CIMC-20230403-144031.csv'), sep=',', skiprows=1)

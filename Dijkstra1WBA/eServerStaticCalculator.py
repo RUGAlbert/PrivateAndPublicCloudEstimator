@@ -37,6 +37,6 @@ def calculateParametersOfServer(serverInfo : dict) -> DataFrame:
 
     regr = linear_model.LinearRegression()
     #mem is  aproblem
-    regr.fit(statsDf[['cpu', 'disk']], statsDf['eServer'])
+    regr.fit(statsDf[['cpu', 'disk', 'mem']], statsDf['eServer'])
     print(regr.intercept_)
     print(regr.coef_)
