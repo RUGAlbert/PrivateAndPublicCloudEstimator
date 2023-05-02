@@ -2,15 +2,18 @@
 This is the start place of the calculation
 '''
 
+import os
+from datetime import timedelta
 from os import path
+import matplotlib.pyplot as plt
 
 import pandas as pd
-import os
 from pandas import DataFrame
 
 from .calculator import calculate
+from .checkConcurrentUsers import plotConccurentUsers
 from .config import Config
-from datetime import timedelta
+
 
 def createOutputFolder():
     outputFolder = path.join(Config.DATAPATH, 'output')
@@ -57,16 +60,36 @@ def calculateConcurrentUsers(serversInfo : dict) -> DataFrame:
     print(COEDF)
     #normalize it to hours
     
-    return None
+    return COEDF
 
+
+def preprocessConcurrentUsers(serversInfo : dict) -> DataFrame:
+    concurrentUserDf = pd.read_csv(path.join(Config.DATAPATH, serversInfo['concurrentUsersFile']), sep=',', skiprows=1)
+    concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%d/%m/%Y %H:%M:%S")
+    concurrentUserDf['Time'] = concurrentUserDf['DateTime']
+    concurrentUserDf['maxUsers'] = concurrentUserDf['Peak']
+    concurrentUserDf = concurrentUserDf[['Time', 'maxUsers']]
+    concurrentUserDf = concurrentUserDf.resample('60min', on='Time').max()
+    print(concurrentUserDf)
+
+    return concurrentUserDf
 
 def start(serversInfo : dict):
     createOutputFolder()
-    calculateConcurrentUsers(serversInfo)
-    return
+    # calculateConcurrentUsers(serversInfo)
+    concurrentUserDf = preprocessConcurrentUsers(serversInfo)
+    plotConccurentUsers(concurrentUserDf)
+
     for server in serversInfo['servers']:
         emmisionsOfServer = calculateEmmisionsOfServer(server)
         emmisionsOfServer = emmisionsOfServer.round(2)
-        print(emmisionsOfServer)
+        resultDf = emmisionsOfServer.merge(concurrentUserDf, how='left', on='Time').sort_values(by='Time')
+        resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
+        print(resultDf)
+        #normalize data
+        # resultDf['TCFPLower'] = resultDf['TCFPLower'] / resultDf['maxUsers']
+        # resultDf['TCFPUpper'] = resultDf['TCFPUpper'] / resultDf['maxUsers']
+        resultDf.plot(use_index=True, y=['eServerDynamic', 'eServerStatic', 'maxUsers'])
+        plt.show()
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
-        emmisionsOfServer.to_csv(csvPath, sep=';')
+        resultDf.to_csv(csvPath, sep=';')
