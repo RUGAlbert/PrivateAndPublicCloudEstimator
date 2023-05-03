@@ -9,7 +9,7 @@ from Dijkstra1WBA.eServerStaticCalculator import calculateParametersOfServer
 with open(path.join('data', 'weekData', 'serverInfo.json'), encoding='utf-8') as f:
     data = json.load(f)
 
-print(data)
+# print(data)
 start(data)
 # calculateParametersOfServer(data['servers'][0])
 

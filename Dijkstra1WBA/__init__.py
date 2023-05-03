@@ -70,7 +70,6 @@ def preprocessConcurrentUsers(serversInfo : dict) -> DataFrame:
     concurrentUserDf['maxUsers'] = concurrentUserDf['Peak']
     concurrentUserDf = concurrentUserDf[['Time', 'maxUsers']]
     concurrentUserDf = concurrentUserDf.resample('60min', on='Time').max()
-    print(concurrentUserDf)
 
     return concurrentUserDf
 
@@ -78,18 +77,18 @@ def start(serversInfo : dict):
     createOutputFolder()
     # calculateConcurrentUsers(serversInfo)
     concurrentUserDf = preprocessConcurrentUsers(serversInfo)
-    plotConccurentUsers(concurrentUserDf)
+    # plotConccurentUsers(concurrentUserDf)
 
     for server in serversInfo['servers']:
         emmisionsOfServer = calculateEmmisionsOfServer(server)
-        emmisionsOfServer = emmisionsOfServer.round(2)
         resultDf = emmisionsOfServer.merge(concurrentUserDf, how='left', on='Time').sort_values(by='Time')
         resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
-        print(resultDf)
         #normalize data
         # resultDf['TCFPLower'] = resultDf['TCFPLower'] / resultDf['maxUsers']
         # resultDf['TCFPUpper'] = resultDf['TCFPUpper'] / resultDf['maxUsers']
+        resultDf = resultDf.round(2)
+        print(resultDf)
         resultDf.plot(use_index=True, y=['eServerDynamic', 'eServerStatic', 'maxUsers'])
-        plt.show()
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
         resultDf.to_csv(csvPath, sep=';')
+    # plt.show()

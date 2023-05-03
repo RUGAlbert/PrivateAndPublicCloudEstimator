@@ -21,5 +21,5 @@ def calculate(serverDf : DataFrame, serverInfo : dict) -> DataFrame:
     result['TCFPUpper'] = result['scope1'] + result['scope2Upper'] + result['scope3']
 
     
-    result = result[['eServerStatic', 'eNetworkStatic', 'eCoolingStatic', 'eServerDynamic', 'eNetworkDynamic', 'eCoolingDynamic', 'scope1', 'scope2Lower', 'scope2Upper', 'scope3', 'TCFPLower', 'TCFPUpper']]
+    result = result[['eServerStatic', 'eServerDynamic', 'eNetworkStatic', 'eNetworkDynamic', 'eCoolingStatic', 'eCoolingDynamic', 'scope1', 'scope2Lower', 'scope2Upper', 'scope3', 'TCFPLower', 'TCFPUpper']]
     return result

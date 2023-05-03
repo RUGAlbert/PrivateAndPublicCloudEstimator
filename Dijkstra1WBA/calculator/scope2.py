@@ -1,5 +1,6 @@
 
 from random import randint
+from os import path
 
 import numpy as np
 import pandas as pd
@@ -23,14 +24,24 @@ def wattToEServer(rawServerDf : DataFrame) -> DataFrame:
     return serverDataDf
 
 
+def calculateNetwork(serverInfo : dict) -> DataFrame:    
+    networkUsageDf = pd.read_csv(path.join(Config.DATAPATH, serverInfo['networkUsageFile']), sep=',', skiprows=1)
+    networkUsageDf['time'] = pd.to_datetime(networkUsageDf['time'], unit='s')
+    # networkUsageDf = networkUsageDf[(networkUsageDf['time'] >= '2023-03-27') & (networkUsageDf['time'] <= '2023-04-04')]
+    networkUsageDf = networkUsageDf.resample('60min', on='time').mean().interpolate('time')
+    networkUsageDf['bytesMoved'] = (networkUsageDf['in'] + networkUsageDf['out']) * 60 * 60
+    networkUsageDf = networkUsageDf[['bytesMoved']]
+    return networkUsageDf
+
 def calculate(rawDataDf : DataFrame, serverInfo : dict) -> DataFrame:
 
     result = wattToEServer(rawDataDf)
     result['eServerStatic'] = 0.8 * result['eServer']
     result['eServerDynamic'] = 0.2 * result['eServer']
 
-    #include real calculation
-    result['eNetwork'] = np.random.randint(50000000,300000000,size=result.shape[0]) * Config.WHPERBYTE
+    networkUsageDf = calculateNetwork(serverInfo)
+    result = result.join(networkUsageDf)
+    result['eNetwork'] = result['bytesMoved'] * Config.WHPERBYTE
     result['eNetworkStatic'] = Config.MU * result['eNetwork']
     result['eNetworkDynamic'] = (1 - Config.MU) * result['eNetwork']
 
