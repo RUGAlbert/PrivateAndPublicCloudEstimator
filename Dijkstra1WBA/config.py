@@ -6,7 +6,7 @@ class Config():
     CARBONINTENSITY = 1.4
     WHPERBYTE = 6e-8
 
-    DATAPATH = path.join('data', 'weekData')
+    DATAPATH = path.join('data', 'serverStatic')
 
     ZETA_LOWER = 1
     GAMMA_LOWER = 0

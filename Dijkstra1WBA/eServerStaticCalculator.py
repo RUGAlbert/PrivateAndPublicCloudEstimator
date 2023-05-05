@@ -7,14 +7,14 @@ from .calculator.scope2 import wattToEServer
 from sklearn import linear_model
 
 def readServerStatistics() -> DataFrame:
-    cpuDf = pd.read_csv(path.join(Config.DATAPATH, 'CPU_sample.csv'), sep=',', skiprows=1)
-    diskDf = pd.read_csv(path.join(Config.DATAPATH, 'DISKIO_sample.csv'), sep=',', skiprows=1)
-    memDf = pd.read_csv(path.join(Config.DATAPATH, 'MEM_sample.csv'), sep=',', skiprows=1)
+    cpuDf = pd.read_csv(path.join(Config.DATAPATH, 'FDX_week_CPU.csv'), sep=',', skiprows=1)
+    diskDf = pd.read_csv(path.join(Config.DATAPATH, 'FDX_week_Disk.csv'), sep=',', skiprows=1)
+    memDf = pd.read_csv(path.join(Config.DATAPATH, 'FDX_week_MEM.csv'), sep=',', skiprows=1)
     
     result = cpuDf[['Time']].copy()
-    result['cpu'] = cpuDf['Usage for 195.213.64.174']
-    result['disk'] = diskDf['Usage for 195.213.64.174']
-    result['mem'] = memDf['Consumed for 195.213.64.174']
+    result['cpu'] = cpuDf['Usage']
+    result['disk'] = diskDf['Usage']
+    result['mem'] = memDf['Consumed']
 
     result = result.dropna()
     result['Time'] = pd.to_datetime(result['Time'])
@@ -32,11 +32,11 @@ def calculateParametersOfServer(serverInfo : dict) -> DataFrame:
     print(serverStatisticsDf)
     statsDf = serverStatisticsDf.merge(serverDf, how='left', on='Time').sort_values(by='Time')
     statsDf = statsDf.dropna()
-    statsDf = statsDf.iloc[10:-10]
+    statsDf = statsDf.iloc[2:-2]
     print(statsDf)
 
     regr = linear_model.LinearRegression()
     #mem is  aproblem
-    regr.fit(statsDf[['cpu', 'disk', 'mem']], statsDf['eServer'])
+    regr.fit(statsDf[['cpu']], statsDf['eServer'])
     print(regr.intercept_)
     print(regr.coef_)
