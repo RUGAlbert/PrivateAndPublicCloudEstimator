@@ -5,6 +5,7 @@ from pandas import DataFrame
 from .config import Config
 from .calculator.scope2 import wattToEServer
 from sklearn import linear_model
+import logging
 
 def readServerStatistics() -> DataFrame:
     cpuDf = pd.read_csv(path.join(Config.DATAPATH, 'FDX_week_CPU.csv'), sep=',', skiprows=1)

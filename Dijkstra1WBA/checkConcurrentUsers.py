@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from pandas import DataFrame
+import logging
 
 
 def plotConccurentUsers(concurrentUserDf : DataFrame):

@@ -6,7 +6,7 @@ class Config():
     CARBONINTENSITY = 1.4
     WHPERBYTE = 6e-8
 
-    DATAPATH = path.join('data', 'serverStatic')
+    DATAPATH = path.join('data', 'monthData')
 
     ZETA_LOWER = 1
     GAMMA_LOWER = 0
@@ -15,3 +15,5 @@ class Config():
     GAMA_UPPER = 0.5
 
     MU = 0.81
+
+    SERVERSTATICWATTS = 217

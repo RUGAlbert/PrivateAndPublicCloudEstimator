@@ -2,6 +2,7 @@
 This is the start place of the calculation
 '''
 
+import logging
 import os
 from datetime import timedelta
 from os import path
@@ -66,10 +67,10 @@ def calculateConcurrentUsers(serversInfo : dict) -> DataFrame:
 def preprocessConcurrentUsers(serversInfo : dict) -> DataFrame:
     concurrentUserDf = pd.read_csv(path.join(Config.DATAPATH, serversInfo['concurrentUsersFile']), sep=',', skiprows=1)
     concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%d/%m/%Y %H:%M:%S")
-    concurrentUserDf['Time'] = concurrentUserDf['DateTime']
+    concurrentUserDf['time'] = concurrentUserDf['DateTime']
     concurrentUserDf['maxUsers'] = concurrentUserDf['Peak']
-    concurrentUserDf = concurrentUserDf[['Time', 'maxUsers']]
-    concurrentUserDf = concurrentUserDf.resample('60min', on='Time').max()
+    concurrentUserDf = concurrentUserDf[['time', 'maxUsers']]
+    concurrentUserDf = concurrentUserDf.resample('60min', on='time').max()
 
     return concurrentUserDf
 
@@ -80,8 +81,9 @@ def start(serversInfo : dict):
     # plotConccurentUsers(concurrentUserDf)
 
     for server in serversInfo['servers']:
+        print(server['name'])
         emmisionsOfServer = calculateEmmisionsOfServer(server)
-        resultDf = emmisionsOfServer.merge(concurrentUserDf, how='left', on='Time').sort_values(by='Time')
+        resultDf = emmisionsOfServer.merge(concurrentUserDf, how='left', on='time').sort_values(by='time')
         resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
         #normalize data
         # resultDf['TCFPLower'] = resultDf['TCFPLower'] / resultDf['maxUsers']

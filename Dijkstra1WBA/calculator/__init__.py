@@ -1,3 +1,4 @@
+import logging
 from pandas import DataFrame
 from . import scope1, scope2, scope3
 from ..config import Config
@@ -19,7 +20,7 @@ def calculate(serverDf : DataFrame, serverInfo : dict) -> DataFrame:
     result['scope3'] = scope3.calculate(serverInfo, multitenancyShare)
     result['TCFPLower'] = result['scope1'] + result['scope2Lower'] + result['scope3']
     result['TCFPUpper'] = result['scope1'] + result['scope2Upper'] + result['scope3']
-
     
     result = result[['eServerStatic', 'eServerDynamic', 'eNetworkStatic', 'eNetworkDynamic', 'eCoolingStatic', 'eCoolingDynamic', 'scope1', 'scope2Lower', 'scope2Upper', 'scope3', 'TCFPLower', 'TCFPUpper']]
+    result.sort_index(inplace=True)
     return result

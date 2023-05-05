@@ -1,6 +1,8 @@
 
 from random import randint
+import logging
 from os import path
+import sys
 
 import numpy as np
 import pandas as pd
@@ -9,18 +11,18 @@ from pandas import DataFrame
 
 
 def wattToEServer(rawServerDf : DataFrame) -> DataFrame:
-    prunnedRawServerDf = rawServerDf[['Time','Platform-Curr', 'CPU-Curr', 'Mem-Curr']].copy()
+    prunnedRawServerDf = rawServerDf[['time','Platform-Curr', 'CPU-Curr', 'Mem-Curr']].copy()
 
     #conversion from watts to kwh
-    prunnedRawServerDf.loc[:, 'Duration'] = -pd.to_datetime(prunnedRawServerDf['Time'], errors='coerce').diff(-1).dt.total_seconds()
+    prunnedRawServerDf.loc[:, 'Duration'] = -pd.to_datetime(prunnedRawServerDf['time'], errors='coerce').diff(-1).dt.total_seconds()
     prunnedRawServerDf.drop(prunnedRawServerDf.tail(1).index,inplace=True)
     prunnedRawServerDf.loc[:, 'DurationInHours'] = prunnedRawServerDf['Duration'] / 3600
     prunnedRawServerDf.loc[:, 'eServer'] = prunnedRawServerDf['DurationInHours'] * prunnedRawServerDf['Platform-Curr']
 
     #group by hour
-    serverDataDf = prunnedRawServerDf[['Time', 'eServer']].copy()
-    serverDataDf.loc[:, "Time"] = pd.to_datetime(serverDataDf["Time"])
-    serverDataDf = serverDataDf.resample('60min', on='Time').sum()
+    serverDataDf = prunnedRawServerDf[['time', 'eServer']].copy()
+    serverDataDf.loc[:, "time"] = pd.to_datetime(serverDataDf["time"])
+    serverDataDf = serverDataDf.resample('60min', on='time').sum()
     return serverDataDf
 
 
@@ -29,18 +31,27 @@ def calculateNetwork(serverInfo : dict) -> DataFrame:
     networkUsageDf['time'] = pd.to_datetime(networkUsageDf['time'], unit='s')
     # networkUsageDf = networkUsageDf[(networkUsageDf['time'] >= '2023-03-27') & (networkUsageDf['time'] <= '2023-04-04')]
     networkUsageDf = networkUsageDf.resample('60min', on='time').mean().interpolate('time')
-    networkUsageDf['bytesMoved'] = (networkUsageDf['in'] + networkUsageDf['out']) * 60 * 60
+    #divided by two since there are two servers
+    networkUsageDf['bytesMoved'] = (networkUsageDf['in'] + networkUsageDf['out']) * 60 * 60 / 2
     networkUsageDf = networkUsageDf[['bytesMoved']]
     return networkUsageDf
 
 def calculate(rawDataDf : DataFrame, serverInfo : dict) -> DataFrame:
 
-    result = wattToEServer(rawDataDf)
-    result['eServerStatic'] = 0.8 * result['eServer']
-    result['eServerDynamic'] = 0.2 * result['eServer']
+    # result = wattToEServer(rawDataDf)
+    result = pd.read_csv(path.join(Config.DATAPATH, serverInfo['powerServerFile']), sep=',', skiprows=1)
+    result.loc[:, "time"] = pd.to_datetime(result["time"], format="%d/%m/%Y %H:%M")
+    result = result.set_index('time')
+    result.sort_index(inplace=True)
+    result['eServer'] = result['watts']
+    result['eServerStatic'] = Config.SERVERSTATICWATTS
+    result['eServerDynamic'] = result['eServer'] - Config.SERVERSTATICWATTS
 
     networkUsageDf = calculateNetwork(serverInfo)
     result = result.join(networkUsageDf)
+    
+    
+    result['bytesMoved'] = result['bytesMoved'].fillna(0)
     result['eNetwork'] = result['bytesMoved'] * Config.WHPERBYTE
     result['eNetworkStatic'] = Config.MU * result['eNetwork']
     result['eNetworkDynamic'] = (1 - Config.MU) * result['eNetwork']
@@ -53,5 +64,5 @@ def calculate(rawDataDf : DataFrame, serverInfo : dict) -> DataFrame:
     result['scope2E'] = result['eServer'] + result['eNetwork'] + result['eCooling']
     result['scope2ELower'] = Config.GAMMA_LOWER * (result['eServerStatic'] + result['eNetworkStatic'] + result['eCoolingStatic']) + Config.ZETA_LOWER * (result['eServerDynamic'] + result['eNetworkDynamic'] + result['eCoolingDynamic'])
     result['scope2EUpper'] = Config.GAMA_UPPER * (result['eServerStatic'] + result['eNetworkStatic'] + result['eCoolingStatic']) + Config.ZETA_UPPER * (result['eServerDynamic'] + result['eNetworkDynamic'] + result['eCoolingDynamic'])
-
+    
     return result
