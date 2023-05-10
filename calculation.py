@@ -3,14 +3,15 @@ from os import path
 
 import pandas as pd
 
-from Dijkstra1WBA import start
+import Dijkstra1WBA, Dijkstra2Cisco
 from Dijkstra1WBA.eServerStaticCalculator import calculateParametersOfServer
 
-with open(path.join('data', 'monthData', 'serverInfo.json'), encoding='utf-8') as f:
+with open(path.join('data', 'cisco', 'serverInfo.json'), encoding='utf-8') as f:
     data = json.load(f)
 
 # print(data)
-start(data)
+# Dijkstra1WBA.start(data)
+Dijkstra2Cisco.start(data)
 # calculateParametersOfServer(data['servers'][0])
 
 # dataPath = path.join('data', 'weekData')

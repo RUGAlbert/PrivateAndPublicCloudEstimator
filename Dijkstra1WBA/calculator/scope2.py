@@ -36,7 +36,7 @@ def calculateNetwork(serverInfo : dict) -> DataFrame:
     networkUsageDf = networkUsageDf[['bytesMoved']]
     return networkUsageDf
 
-def calculate(rawDataDf : DataFrame, serverInfo : dict) -> DataFrame:
+def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
 
     # result = wattToEServer(rawDataDf)
     result = pd.read_csv(path.join(Config.DATAPATH, serverInfo['powerServerFile']), sep=',', skiprows=1)
@@ -55,6 +55,8 @@ def calculate(rawDataDf : DataFrame, serverInfo : dict) -> DataFrame:
     result['eNetwork'] = result['bytesMoved'] * Config.WHPERBYTE
     result['eNetworkStatic'] = Config.MU * result['eNetwork']
     result['eNetworkDynamic'] = (1 - Config.MU) * result['eNetwork']
+    # result['eNetworkStatic'] = 12
+    # result['eNetworkDynamic'] = (1 - Config.MU) * result['eNetwork']
 
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
     result['nu'] = (result['eServerStatic'] + result['eNetworkStatic']) / (result['eServer'] + result['eNetwork'])
@@ -65,4 +67,20 @@ def calculate(rawDataDf : DataFrame, serverInfo : dict) -> DataFrame:
     result['scope2ELower'] = Config.GAMMA_LOWER * (result['eServerStatic'] + result['eNetworkStatic'] + result['eCoolingStatic']) + Config.ZETA_LOWER * (result['eServerDynamic'] + result['eNetworkDynamic'] + result['eCoolingDynamic'])
     result['scope2EUpper'] = Config.GAMA_UPPER * (result['eServerStatic'] + result['eNetworkStatic'] + result['eCoolingStatic']) + Config.ZETA_UPPER * (result['eServerDynamic'] + result['eNetworkDynamic'] + result['eCoolingDynamic'])
     
+    return result
+
+def calculate(serverInfo : dict) -> DataFrame:
+    result = calculateEnergyConsumption(serverInfo)
+
+    carbonIntensityDf =  pd.read_csv(path.join(Config.DATAPATH, serverInfo['carbonIntensityFile']), sep=',', skiprows=1)
+    carbonIntensityDf['time'] = pd.to_datetime(carbonIntensityDf['Datetime (UTC)']).dt.tz_localize(None)
+    # print(carbonIntensityDf.columns)
+    #divide it by 1000 to translate from kwh to wh
+    carbonIntensityDf['ci'] = carbonIntensityDf['London'] / 1000
+    # carbonIntensityDf = carbonIntensityDf.set_index('time')
+    carbonIntensityDf = carbonIntensityDf.resample('60min', on='time').mean()
+    carbonIntensityDf = carbonIntensityDf[['ci']]
+    result = result.join(carbonIntensityDf)
+    result['scope2Lower'] = result['scope2ELower'] * result['ci']
+    result['scope2Upper'] = result['scope2EUpper'] * result['ci']
     return result

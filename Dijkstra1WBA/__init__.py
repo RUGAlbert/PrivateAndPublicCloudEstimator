@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pandas import DataFrame
 
-from .calculator import calculate
+from .calculator import calculateEmmisionsOfServer
 from .checkConcurrentUsers import plotConccurentUsers
 from .config import Config
 
@@ -20,11 +20,6 @@ def createOutputFolder():
     outputFolder = path.join(Config.DATAPATH, 'output')
     if not os.path.exists(outputFolder):
         os.makedirs(outputFolder)
-
-
-def calculateEmmisionsOfServer(serverInfo : dict) -> DataFrame:
-    serverEnergyDf = pd.read_csv(path.join(Config.DATAPATH, serverInfo['powerServerFile']), sep=',', skiprows=1)
-    return calculate(serverEnergyDf, serverInfo)
 
 def calculateConcurrentUsers(serversInfo : dict) -> DataFrame:
     userLoginDataDf = pd.read_csv(path.join(Config.DATAPATH, serversInfo['concurrentUsersFile']), sep=',', skiprows=1)
@@ -60,7 +55,7 @@ def calculateConcurrentUsers(serversInfo : dict) -> DataFrame:
     COEDF['COE'] = COEDF['minutes'] / 60
     print(COEDF)
     #normalize it to hours
-    
+
     return COEDF
 
 
@@ -86,11 +81,19 @@ def start(serversInfo : dict):
         resultDf = emmisionsOfServer.merge(concurrentUserDf, how='left', on='time').sort_values(by='time')
         resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
         #normalize data
-        # resultDf['TCFPLower'] = resultDf['TCFPLower'] / resultDf['maxUsers']
-        # resultDf['TCFPUpper'] = resultDf['TCFPUpper'] / resultDf['maxUsers']
+        resultDf['TCFPLowerPerUser'] = resultDf['TCFPLower'] / resultDf['maxUsers']
+        resultDf['TCFPUpperPerUser'] = resultDf['TCFPUpper'] / resultDf['maxUsers']
         resultDf = resultDf.round(2)
-        print(resultDf)
-        resultDf.plot(use_index=True, y=['eServerDynamic', 'eServerStatic', 'maxUsers'])
+        # resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['eNetworkStatic', 'eNetworkDynamic', 'maxUsers'])
+        # resultDf[resultDf['maxUsers'] > 1].plot.scatter(x='maxUsers',y='eServerDynamic',c='DarkBlue')
+        # resultDf['ci'] *= 1000
+        # resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'])
+        resultDf[(resultDf['maxUsers'] > 1) & resultDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
+
+        # fig, ax = plt.subplots(figsize=(10,5))
+        # resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'], ax = ax)
+        # resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['maxUsers', 'ci'], ax = ax, secondary_y = True)
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
         resultDf.to_csv(csvPath, sep=';')
-    # plt.show()
+        break
+    plt.show()
