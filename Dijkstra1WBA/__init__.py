@@ -74,8 +74,9 @@ def start(serversInfo : dict):
     # calculateConcurrentUsers(serversInfo)
     concurrentUserDf = preprocessConcurrentUsers(serversInfo)
     # plotConccurentUsers(concurrentUserDf)
-
+    
     for server in serversInfo['servers']:
+        #Works with QT on linux 
         print(server['name'])
         emmisionsOfServer = calculateEmmisionsOfServer(server)
         resultDf = emmisionsOfServer.merge(concurrentUserDf, how='left', on='time').sort_values(by='time')
@@ -89,15 +90,24 @@ def start(serversInfo : dict):
         cumDf = resultDf.groupby(resultDf.index.to_period('m')).cumsum()
         print(cumDf)
         cumDf[(cumDf['maxUsers'] > 1) & cumDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
+        fm = plt.get_current_fig_manager()
+        fm.window.wm_geometry("+0+0")
         resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['eNetworkStatic', 'eNetworkDynamic', 'maxUsers'])
+        fm = plt.get_current_fig_manager()
+        fm.window.wm_geometry("+800+0")
+        resultDf[(resultDf['maxUsers'] > 1) & (resultDf['eNetworkDynamic'] > 0)].plot.scatter(x='maxUsers', y='TCFPUpper', c='DarkBlue')
         # resultDf[resultDf['maxUsers'] > 1].plot.scatter(x='maxUsers',y='eServerDynamic',c='DarkBlue')
         # resultDf['ci'] *= 1000
         # resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'])
         # resultDf[(resultDf['maxUsers'] > 1) & resultDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
 
-        _, ax = plt.subplots(figsize=(10,5))
+        fm = plt.get_current_fig_manager()
+        fm.window.wm_geometry("+0+500")
+        _, ax = plt.subplots()
         resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['TCFPUpperPerUser', 'ci'], ax = ax)
         resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['maxUsers'], ax = ax, secondary_y = True)
+        fm = plt.get_current_fig_manager()
+        fm.window.wm_geometry("+800+500")
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
         resultDf.to_csv(csvPath, sep=';')
         break
