@@ -84,15 +84,20 @@ def start(serversInfo : dict):
         resultDf['TCFPLowerPerUser'] = resultDf['TCFPLower'] / resultDf['maxUsers']
         resultDf['TCFPUpperPerUser'] = resultDf['TCFPUpper'] / resultDf['maxUsers']
         resultDf = resultDf.round(2)
-        # resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['eNetworkStatic', 'eNetworkDynamic', 'maxUsers'])
+        #make it cummalative
+        print(resultDf)
+        cumDf = resultDf.groupby(resultDf.index.to_period('m')).cumsum()
+        print(cumDf)
+        cumDf[(cumDf['maxUsers'] > 1) & cumDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
+        resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['eNetworkStatic', 'eNetworkDynamic', 'maxUsers'])
         # resultDf[resultDf['maxUsers'] > 1].plot.scatter(x='maxUsers',y='eServerDynamic',c='DarkBlue')
         # resultDf['ci'] *= 1000
         # resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'])
-        resultDf[(resultDf['maxUsers'] > 1) & resultDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
+        # resultDf[(resultDf['maxUsers'] > 1) & resultDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
 
-        # fig, ax = plt.subplots(figsize=(10,5))
-        # resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'], ax = ax)
-        # resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['maxUsers', 'ci'], ax = ax, secondary_y = True)
+        _, ax = plt.subplots(figsize=(10,5))
+        resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['TCFPUpperPerUser', 'ci'], ax = ax)
+        resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['maxUsers'], ax = ax, secondary_y = True)
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
         resultDf.to_csv(csvPath, sep=';')
         break

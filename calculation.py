@@ -7,11 +7,14 @@ import Dijkstra1WBA, Dijkstra2Cisco
 from Dijkstra1WBA.eServerStaticCalculator import calculateParametersOfServer
 
 with open(path.join('data', 'cisco', 'serverInfo.json'), encoding='utf-8') as f:
-    data = json.load(f)
+    ciscoData = json.load(f)
+
+with open(path.join('data', 'monthData', 'serverInfo.json'), encoding='utf-8') as f:
+    monthData = json.load(f)
 
 # print(data)
-# Dijkstra1WBA.start(data)
-Dijkstra2Cisco.start(data)
+Dijkstra1WBA.start(monthData)
+# Dijkstra2Cisco.start(ciscoData)
 # calculateParametersOfServer(data['servers'][0])
 
 # dataPath = path.join('data', 'weekData')

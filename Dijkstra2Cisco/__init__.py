@@ -10,7 +10,7 @@ def start(serversInfo : dict):
     serverInfo = serversInfo['servers'][1]
     dataDumpDf = pd.read_csv(path.join(Config.DATAPATH, serverInfo['powerServerFile']), sep=',', skiprows=1)
     dataDumpDf['isServer'] = dataDumpDf['Name'].str.contains("hxn")
-    
+
     dataDumpDf['totalEnergy'] = dataDumpDf['Power|Total Energy (Wh)']
     # dataDumpDf['tenantEnergy'] = dataDumpDf['Power|Tenant Energy (Wh)']
     dataDumpDf['time'] = pd.to_datetime(dataDumpDf['Interval Breakdown'])
@@ -23,4 +23,8 @@ def start(serversInfo : dict):
     print(dataDumpDf)
 
     result = dataDumpDf.groupby(['time']).aggregate({'serverTenantEnergy':'sum','storageTenantEnergy':'sum'})
+    result = result.round(2)
     print(result)
+
+    csvPath = path.join(Config.DATAPATH, 'output', serverInfo['name'] + '.csv')
+    result.to_csv(csvPath, sep=';')
