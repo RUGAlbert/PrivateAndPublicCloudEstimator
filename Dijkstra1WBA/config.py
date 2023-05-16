@@ -17,3 +17,5 @@ class Config():
     MU = 0.81
 
     SERVERSTATICWATTS = 217
+
+    USEHOURLYCARBON = True

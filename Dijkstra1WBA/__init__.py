@@ -74,9 +74,9 @@ def start(serversInfo : dict):
     # calculateConcurrentUsers(serversInfo)
     concurrentUserDf = preprocessConcurrentUsers(serversInfo)
     # plotConccurentUsers(concurrentUserDf)
-    
+
     for server in serversInfo['servers']:
-        #Works with QT on linux 
+        #Works with QT on linux
         print(server['name'])
         emmisionsOfServer = calculateEmmisionsOfServer(server)
         resultDf = emmisionsOfServer.merge(concurrentUserDf, how='left', on='time').sort_values(by='time')
@@ -85,29 +85,26 @@ def start(serversInfo : dict):
         resultDf['TCFPLowerPerUser'] = resultDf['TCFPLower'] / resultDf['maxUsers']
         resultDf['TCFPUpperPerUser'] = resultDf['TCFPUpper'] / resultDf['maxUsers']
         resultDf = resultDf.round(2)
-        #make it cummalative
-        print(resultDf)
-        cumDf = resultDf.groupby(resultDf.index.to_period('m')).cumsum()
-        print(cumDf)
-        cumDf[(cumDf['maxUsers'] > 1) & cumDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
-        fm = plt.get_current_fig_manager()
-        fm.window.wm_geometry("+0+0")
-        resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['eNetworkStatic', 'eNetworkDynamic', 'maxUsers'])
-        fm = plt.get_current_fig_manager()
-        fm.window.wm_geometry("+800+0")
-        resultDf[(resultDf['maxUsers'] > 1) & (resultDf['eNetworkDynamic'] > 0)].plot.scatter(x='maxUsers', y='TCFPUpper', c='DarkBlue')
-        # resultDf[resultDf['maxUsers'] > 1].plot.scatter(x='maxUsers',y='eServerDynamic',c='DarkBlue')
-        # resultDf['ci'] *= 1000
-        # resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'])
-        # resultDf[(resultDf['maxUsers'] > 1) & resultDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
 
-        fm = plt.get_current_fig_manager()
-        fm.window.wm_geometry("+0+500")
-        _, ax = plt.subplots()
-        resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['TCFPUpperPerUser', 'ci'], ax = ax)
-        resultDf[resultDf['maxUsers'] > 1].plot(use_index=True, y=['maxUsers'], ax = ax, secondary_y = True)
-        fm = plt.get_current_fig_manager()
-        fm.window.wm_geometry("+800+500")
+        if True:
+            #make it cummalative
+            cumDf = resultDf.groupby(resultDf.index.to_period('m')).cumsum()
+            cumDf[(cumDf['maxUsers'] > 1) & cumDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
+
+            usefullData = resultDf[(resultDf['maxUsers'] > 1) & (resultDf['eNetworkDynamic'] > 0)]
+            plt.get_current_fig_manager().window.wm_geometry("+0+0")
+            usefullData.plot(use_index=True, y=['eNetwork', 'eNetworkTotal', 'maxUsers'])
+            plt.get_current_fig_manager().window.wm_geometry("+800+0")
+            usefullData.plot.scatter(x='maxUsers', y='TCFPLower', c='DarkBlue', title='New algorithm')
+            # resultDf['ci'] *= 1000
+            # usefullData.plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'])
+            # usefullData.plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
+
+            plt.get_current_fig_manager().window.wm_geometry("+0+500")
+            _, ax = plt.subplots()
+            usefullData.plot(use_index=True, y=['eNetwork', 'eNetworkTotal'], ax = ax, title='New algorithm')
+            usefullData.plot(use_index=True, y=['maxUsers'], ax = ax, secondary_y = True)
+            plt.get_current_fig_manager().window.wm_geometry("+800+500")
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
         resultDf.to_csv(csvPath, sep=';')
         break

@@ -26,7 +26,7 @@ def wattToEServer(rawServerDf : DataFrame) -> DataFrame:
     return serverDataDf
 
 
-def calculateNetwork(serverInfo : dict) -> DataFrame:    
+def calculateNetwork(serverInfo : dict) -> DataFrame:
     networkUsageDf = pd.read_csv(path.join(Config.DATAPATH, serverInfo['networkUsageFile']), sep=',', skiprows=1)
     networkUsageDf['time'] = pd.to_datetime(networkUsageDf['time'], unit='s')
     # networkUsageDf = networkUsageDf[(networkUsageDf['time'] >= '2023-03-27') & (networkUsageDf['time'] <= '2023-04-04')]
@@ -49,14 +49,15 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
 
     networkUsageDf = calculateNetwork(serverInfo)
     result = result.join(networkUsageDf)
-    
-    
+
+
     result['bytesMoved'] = result['bytesMoved'].fillna(0)
     result['eNetwork'] = result['bytesMoved'] * Config.WHPERBYTE
-    result['eNetworkStatic'] = Config.MU * result['eNetwork']
-    result['eNetworkDynamic'] = (1 - Config.MU) * result['eNetwork']
-    # result['eNetworkStatic'] = 12
+    # result['eNetworkStatic'] = Config.MU * result['eNetwork']
     # result['eNetworkDynamic'] = (1 - Config.MU) * result['eNetwork']
+    result['eNetworkStatic'] = Config.WHPERBYTE * Config.MU * 764543* 60 * 60 / 2
+    result['eNetworkDynamic'] = (1 - Config.MU) * result['eNetwork']
+    result['eNetworkTotal'] =  result['eNetworkStatic'] + result['eNetworkDynamic']
 
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
     result['nu'] = (result['eServerStatic'] + result['eNetworkStatic']) / (result['eServer'] + result['eNetwork'])
@@ -66,7 +67,7 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
     result['scope2E'] = result['eServer'] + result['eNetwork'] + result['eCooling']
     result['scope2ELower'] = Config.GAMMA_LOWER * (result['eServerStatic'] + result['eNetworkStatic'] + result['eCoolingStatic']) + Config.ZETA_LOWER * (result['eServerDynamic'] + result['eNetworkDynamic'] + result['eCoolingDynamic'])
     result['scope2EUpper'] = Config.GAMA_UPPER * (result['eServerStatic'] + result['eNetworkStatic'] + result['eCoolingStatic']) + Config.ZETA_UPPER * (result['eServerDynamic'] + result['eNetworkDynamic'] + result['eCoolingDynamic'])
-    
+
     return result
 
 def calculate(serverInfo : dict) -> DataFrame:
@@ -81,6 +82,12 @@ def calculate(serverInfo : dict) -> DataFrame:
     carbonIntensityDf = carbonIntensityDf.resample('60min', on='time').mean()
     carbonIntensityDf = carbonIntensityDf[['ci']]
     result = result.join(carbonIntensityDf)
-    result['scope2Lower'] = result['scope2ELower'] * result['ci']
-    result['scope2Upper'] = result['scope2EUpper'] * result['ci']
+
+    if Config.USEHOURLYCARBON:
+        result['scope2Lower'] = result['scope2ELower'] * result['ci']
+        result['scope2Upper'] = result['scope2EUpper'] * result['ci']
+    else:
+        result['scope2Lower'] = result['scope2ELower'] * Config.CARBONINTENSITY
+        result['scope2Upper'] = result['scope2EUpper'] * Config.CARBONINTENSITY
+
     return result
