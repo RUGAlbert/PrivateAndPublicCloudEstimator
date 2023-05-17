@@ -89,21 +89,21 @@ def start(serversInfo : dict):
         if True:
             #make it cummalative
             cumDf = resultDf.groupby(resultDf.index.to_period('m')).cumsum()
-            cumDf[(cumDf['maxUsers'] > 1) & cumDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
+            # cumDf[(cumDf['maxUsers'] > 1) & cumDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
 
             usefullData = resultDf[(resultDf['maxUsers'] > 1) & (resultDf['eNetworkDynamic'] > 0)]
-            plt.get_current_fig_manager().window.wm_geometry("+0+0")
-            usefullData.plot(use_index=True, y=['eNetwork', 'eNetworkTotal', 'maxUsers'])
+            # plt.get_current_fig_manager().window.wm_geometry("+0+0")
+            usefullData.plot(use_index=True, y=['eNetworkStatic', 'eNetworkDynamic', 'eNetwork'])
             plt.get_current_fig_manager().window.wm_geometry("+800+0")
-            usefullData.plot.scatter(x='maxUsers', y='TCFPLower', c='DarkBlue', title='New algorithm')
+            # usefullData.plot.scatter(x='maxUsers', y='TCFPLowerPerUser', c='DarkBlue', title='New algorithm')
             # resultDf['ci'] *= 1000
             # usefullData.plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'])
             # usefullData.plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
 
-            plt.get_current_fig_manager().window.wm_geometry("+0+500")
+            # plt.get_current_fig_manager().window.wm_geometry("+0+500")
             _, ax = plt.subplots()
-            usefullData.plot(use_index=True, y=['eNetwork', 'eNetworkTotal'], ax = ax, title='New algorithm')
-            usefullData.plot(use_index=True, y=['maxUsers'], ax = ax, secondary_y = True)
+            usefullData.plot(use_index=True, y=['eNetworkTotal', 'eNetwork'], ax = ax, title='Dynamic mu')
+            # usefullData.plot(use_index=True, y=['mu'], ax = ax, secondary_y = True)
             plt.get_current_fig_manager().window.wm_geometry("+800+500")
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
         resultDf.to_csv(csvPath, sep=';')

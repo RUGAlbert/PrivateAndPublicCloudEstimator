@@ -3,6 +3,7 @@ from random import randint
 import logging
 from os import path
 import sys
+import numpy as np
 
 import numpy as np
 import pandas as pd
@@ -34,6 +35,7 @@ def calculateNetwork(serverInfo : dict) -> DataFrame:
     #divided by two since there are two servers
     networkUsageDf['bytesMoved'] = (networkUsageDf['in'] + networkUsageDf['out']) * 60 * 60 / 2
     networkUsageDf = networkUsageDf[['bytesMoved']]
+    networkUsageDf = networkUsageDf[networkUsageDf['bytesMoved'] > 1000]
     return networkUsageDf
 
 def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
@@ -53,10 +55,16 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
 
     result['bytesMoved'] = result['bytesMoved'].fillna(0)
     result['eNetwork'] = result['bytesMoved'] * Config.WHPERBYTE
-    # result['eNetworkStatic'] = Config.MU * result['eNetwork']
-    # result['eNetworkDynamic'] = (1 - Config.MU) * result['eNetwork']
-    result['eNetworkStatic'] = Config.WHPERBYTE * Config.MU * 764543* 60 * 60 / 2
-    result['eNetworkDynamic'] = (1 - Config.MU) * result['eNetwork']
+    result['mu'] = 1 - (1 - Config.MU) * (result['eNetwork'] - 10 ) / (250)
+    peaks = result[result['eNetwork'] > 0].resample('D')['eNetwork'].max()
+    print(peaks)
+    avgMax = np.mean(peaks)
+    print(avgMax)
+    # result['mu'] = result['mu'].rolling(window=30).mean().shift(1)
+    print(result)
+    # result['eNetworkStatic'] = result['mu'] * result['eNetwork']
+    result['eNetworkStatic'] = avgMax * Config.MU
+    result['eNetworkDynamic'] = (1 - result['mu']) * result['eNetwork']
     result['eNetworkTotal'] =  result['eNetworkStatic'] + result['eNetworkDynamic']
 
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
