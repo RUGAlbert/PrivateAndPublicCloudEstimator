@@ -9,12 +9,17 @@ from os import path
 import matplotlib.pyplot as plt
 
 import pandas as pd
+import numpy as np
 from pandas import DataFrame
 
 from .calculator import calculateEmmisionsOfServer
 from .checkConcurrentUsers import plotConccurentUsers
 from .config import Config
 
+from sklearn.linear_model import LinearRegression, TweedieRegressor
+from sklearn.preprocessing import PolynomialFeatures
+
+from scipy.optimize import curve_fit
 
 def createOutputFolder():
     outputFolder = path.join(Config.DATAPATH, 'output')
@@ -81,9 +86,35 @@ def start(serversInfo : dict):
         emmisionsOfServer = calculateEmmisionsOfServer(server)
         resultDf = emmisionsOfServer.merge(concurrentUserDf, how='left', on='time').sort_values(by='time')
         resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
+        resultDf = resultDf[(resultDf['maxUsers'] > 1) & (resultDf['eNetworkDynamic'] > 0)]
         #normalize data
         resultDf['TCFPLowerPerUser'] = resultDf['TCFPLower'] / resultDf['maxUsers']
         resultDf['TCFPUpperPerUser'] = resultDf['TCFPUpper'] / resultDf['maxUsers']
+
+        
+        #do the linear regression
+
+        # X = (resultDf['maxUsers'].iloc[:].values.reshape(-1, 1))  # values converts it into a numpy array
+        # Y = (resultDf['TCFPLowerPerUser'].iloc[:].values.reshape(-1, 1))
+        XY = np.column_stack((resultDf['maxUsers'], resultDf['TCFPLowerPerUser']))
+        XY = XY[np.argsort(XY[:, 0])]
+
+        X = XY[:,0].reshape(-1,1)
+        Y = XY[:,1].reshape(-1,1)
+
+        # X
+        print(min(resultDf['maxUsers']), max(resultDf['maxUsers']))
+
+        poly = PolynomialFeatures(degree=2, include_bias=False)
+        poly_features = poly.fit_transform(X)
+        # regressor = TweedieRegressor(power=1, alpha=0.5, link='log')  # create object for the class
+        regressor = LinearRegression()
+        regressor.fit(X, 1/ np.power(Y, 2))
+        # regressor.fit(X, Y)  # perform linear regression
+        YPred = 1/ (np.power(regressor.predict(X), 1/2))
+
+        print(regressor.coef_)
+
         resultDf = resultDf.round(2)
 
         if True:
@@ -91,18 +122,20 @@ def start(serversInfo : dict):
             cumDf = resultDf.groupby(resultDf.index.to_period('m')).cumsum()
             # cumDf[(cumDf['maxUsers'] > 1) & cumDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
 
-            usefullData = resultDf[(resultDf['maxUsers'] > 1) & (resultDf['eNetworkDynamic'] > 0)]
+            # usefullData = resultDf[(resultDf['maxUsers'] > 1) & (resultDf['eNetworkDynamic'] > 0)]
             # plt.get_current_fig_manager().window.wm_geometry("+0+0")
-            usefullData.plot(use_index=True, y=['eNetworkStatic', 'eNetworkDynamic', 'eNetwork'])
+            resultDf.plot(use_index=True, y=['ci'])
             plt.get_current_fig_manager().window.wm_geometry("+800+0")
-            # usefullData.plot.scatter(x='maxUsers', y='TCFPLowerPerUser', c='DarkBlue', title='New algorithm')
+            resultDf.plot.scatter(x='maxUsers', y='TCFPLowerPerUser', c='DarkBlue', title='New algorithm')
+            plt.plot(X, YPred, color='red')
+
             # resultDf['ci'] *= 1000
             # usefullData.plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'])
             # usefullData.plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
 
             # plt.get_current_fig_manager().window.wm_geometry("+0+500")
-            _, ax = plt.subplots()
-            usefullData.plot(use_index=True, y=['eNetworkTotal', 'eNetwork'], ax = ax, title='Dynamic mu')
+            # _, ax = plt.subplots()
+            # usefullData.plot(use_index=True, y=['eNetworkTotal', 'eNetwork'], ax = ax, title='Dynamic mu')
             # usefullData.plot(use_index=True, y=['mu'], ax = ax, secondary_y = True)
             plt.get_current_fig_manager().window.wm_geometry("+800+500")
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
