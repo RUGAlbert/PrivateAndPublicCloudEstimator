@@ -57,15 +57,13 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
     result['eNetwork'] = result['bytesMoved'] * Config.WHPERBYTE
     result['mu'] = 1 - (1 - Config.MU) * (result['eNetwork'] - 10 ) / (250)
     peaks = result[result['eNetwork'] > 0].resample('D')['eNetwork'].max()
-    print(peaks)
     avgMax = np.mean(peaks)
-    print(avgMax)
     # result['mu'] = result['mu'].rolling(window=30).mean().shift(1)
-    print(result)
     # result['eNetworkStatic'] = result['mu'] * result['eNetwork']
     result['eNetworkStatic'] = avgMax * Config.MU
     result['eNetworkDynamic'] = (1 - result['mu']) * result['eNetwork']
-    result['eNetworkTotal'] =  result['eNetworkStatic'] + result['eNetworkDynamic']
+    result['eNetworkCalculatedWithConstant'] = result['eNetwork']
+    result['eNetworkWithNewAlgorithm'] =  result['eNetworkStatic'] + result['eNetworkDynamic']
 
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
     result['nu'] = (result['eServerStatic'] + result['eNetworkStatic']) / (result['eServer'] + result['eNetwork'])

@@ -18,6 +18,7 @@ from .config import Config
 
 from sklearn.linear_model import LinearRegression, TweedieRegressor
 from sklearn.preprocessing import PolynomialFeatures
+from sklearn.metrics import mean_squared_error
 
 from scipy.optimize import curve_fit
 
@@ -31,12 +32,10 @@ def calculateConcurrentUsers(serversInfo : dict) -> DataFrame:
 
     userLoginDataDf['start_time'] = pd.to_datetime(userLoginDataDf['LoginDate'] + " " + userLoginDataDf['LoginTime (GMT)'])
     userLoginDataDf['end_time'] = pd.to_datetime(userLoginDataDf['LogoutDate'] + " " + userLoginDataDf['LogoutTime'])
-    print(userLoginDataDf)
 
     minTimeStamp = (userLoginDataDf['start_time'].min()).replace(minute=0, second=0)
     maxTimeStamp = (userLoginDataDf['end_time'].max()).replace(minute=0, second=0)
 
-    print(minTimeStamp, maxTimeStamp)
     dates = pd.date_range(minTimeStamp, maxTimeStamp, freq='H')
 
     COEDF = pd.DataFrame({'timestamp': dates, 'minutes':0})
@@ -58,7 +57,6 @@ def calculateConcurrentUsers(serversInfo : dict) -> DataFrame:
         COEDF.loc[COEDF['timestamp'].isin(fullHoursRange), 'minutes'] += 60
 
     COEDF['COE'] = COEDF['minutes'] / 60
-    print(COEDF)
     #normalize it to hours
 
     return COEDF
@@ -103,17 +101,27 @@ def start(serversInfo : dict):
         Y = XY[:,1].reshape(-1,1)
 
         # X
-        print(min(resultDf['maxUsers']), max(resultDf['maxUsers']))
+        print(min(X), max(X))
 
-        poly = PolynomialFeatures(degree=2, include_bias=False)
-        poly_features = poly.fit_transform(X)
+        # poly = PolynomialFeatures(degree=2, include_bias=False)
+        # poly_features = poly.fit_transform(X)
         # regressor = TweedieRegressor(power=1, alpha=0.5, link='log')  # create object for the class
         regressor = LinearRegression()
-        regressor.fit(X, 1/ np.power(Y, 2))
+        regressor.fit(X, 1/ (np.power(Y, Config.POWERFUNCTIONFORREGRESSION)))
+        print(regressor.score(X, 1/ (np.power(Y, Config.POWERFUNCTIONFORREGRESSION))))
         # regressor.fit(X, Y)  # perform linear regression
-        YPred = 1/ (np.power(regressor.predict(X), 1/2))
+        predictedY = regressor.predict(X)
+        YPred = 1/ (np.power(predictedY, 1/Config.POWERFUNCTIONFORREGRESSION))
 
-        print(regressor.coef_)
+        # YPred = 1 / regressor.predict(X)
+
+        # fit = np.polyfit(X, Y, 2)
+        # fittedFunc =  np.poly1d(fit)
+        # YPred = fittedFunc(X)
+
+
+        print(mean_squared_error(Y[~np.isnan(YPred)], YPred[~np.isnan(YPred)]))
+        # print(min(regressor.predict(X)))
 
         resultDf = resultDf.round(2)
 
@@ -135,8 +143,8 @@ def start(serversInfo : dict):
 
             # plt.get_current_fig_manager().window.wm_geometry("+0+500")
             # _, ax = plt.subplots()
-            # usefullData.plot(use_index=True, y=['eNetworkTotal', 'eNetwork'], ax = ax, title='Dynamic mu')
-            # usefullData.plot(use_index=True, y=['mu'], ax = ax, secondary_y = True)
+            # resultDf.plot(use_index=True, y=['eNetworkWithNewAlgorithm', 'eNetworkCalculatedWithConstant'], ax = ax, title='Dynamic mu')
+            # resultDf.plot(use_index=True, y=['mu'], ax = ax, secondary_y = True)
             plt.get_current_fig_manager().window.wm_geometry("+800+500")
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
         resultDf.to_csv(csvPath, sep=';')
