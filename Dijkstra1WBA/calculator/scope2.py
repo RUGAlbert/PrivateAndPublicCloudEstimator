@@ -46,8 +46,8 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
     result = result.set_index('time')
     result.sort_index(inplace=True)
     result['eServer'] = result['watts']
-    result['eServerStatic'] = Config.SERVERSTATICWATTS
-    result['eServerDynamic'] = result['eServer'] - Config.SERVERSTATICWATTS
+    result['eServerStatic'] = serverInfo['energyServerStatic']
+    result['eServerDynamic'] = result['eServer'] - serverInfo['energyServerStatic']
 
     networkUsageDf = calculateNetwork(serverInfo)
     result = result.join(networkUsageDf)
@@ -66,7 +66,7 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
     result['eNetworkWithNewAlgorithm'] =  result['eNetworkStatic'] + result['eNetworkDynamic']
 
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
-    result['nu'] = (result['eServerStatic'] + result['eNetworkStatic']) / (result['eServer'] + result['eNetwork'])
+    result['nu'] = (result['eServerStatic'] + result['eNetworkStatic']) / (result['eServer'] + result['eNetworkWithNewAlgorithm'])
     result['eCoolingStatic'] = result['nu'] * result['eCooling']
     result['eCoolingDynamic'] = (1 - result['nu']) * result['eCooling']
 

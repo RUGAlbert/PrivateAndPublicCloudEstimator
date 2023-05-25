@@ -6,21 +6,19 @@ import logging
 import os
 from datetime import timedelta
 from os import path
-import matplotlib.pyplot as plt
+from typing import Tuple
 
-import pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from pandas import DataFrame
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
 
 from .calculator import calculateEmmisionsOfServer
 from .checkConcurrentUsers import plotConccurentUsers
 from .config import Config
 
-from sklearn.linear_model import LinearRegression, TweedieRegressor
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.metrics import mean_squared_error
-
-from scipy.optimize import curve_fit
 
 def createOutputFolder():
     outputFolder = path.join(Config.DATAPATH, 'output')
@@ -72,11 +70,34 @@ def preprocessConcurrentUsers(serversInfo : dict) -> DataFrame:
 
     return concurrentUserDf
 
+
+def doLinearRegression(resultDf : DataFrame) -> Tuple[DataFrame, DataFrame]:     #do the linear regression
+
+    # X = (resultDf['maxUsers'].iloc[:].values.reshape(-1, 1))  # values converts it into a numpy array
+    # Y = (resultDf['TCFPLowerPerUser'].iloc[:].values.reshape(-1, 1))
+    XY = np.column_stack((resultDf['maxUsers'], resultDf['TCFPUpperPerUser']))
+    XY = XY[np.argsort(XY[:, 0])]
+
+    X = XY[:,0].reshape(-1,1)
+    Y = XY[:,1].reshape(-1,1)
+
+    regressor = LinearRegression()
+    regressor.fit(X, 1/ (np.power(Y, Config.POWERFUNCTIONFORREGRESSION)))
+    print(regressor.score(X, 1/ (np.power(Y, Config.POWERFUNCTIONFORREGRESSION))))
+    # regressor.fit(X, Y)  # perform linear regression
+    predictedY = regressor.predict(X)
+    print("Cooefficent", regressor.coef_)
+    YPred = 1/ (np.power(predictedY, 1/Config.POWERFUNCTIONFORREGRESSION))
+    return X, YPred
+
 def start(serversInfo : dict):
     createOutputFolder()
     # calculateConcurrentUsers(serversInfo)
     concurrentUserDf = preprocessConcurrentUsers(serversInfo)
     # plotConccurentUsers(concurrentUserDf)
+
+
+    totalDf = DataFrame()
 
     for server in serversInfo['servers']:
         #Works with QT on linux
@@ -89,41 +110,15 @@ def start(serversInfo : dict):
         resultDf['TCFPLowerPerUser'] = resultDf['TCFPLower'] / resultDf['maxUsers']
         resultDf['TCFPUpperPerUser'] = resultDf['TCFPUpper'] / resultDf['maxUsers']
 
-        
-        #do the linear regression
+        XPred, YPred = doLinearRegression(resultDf)
 
-        # X = (resultDf['maxUsers'].iloc[:].values.reshape(-1, 1))  # values converts it into a numpy array
-        # Y = (resultDf['TCFPLowerPerUser'].iloc[:].values.reshape(-1, 1))
-        XY = np.column_stack((resultDf['maxUsers'], resultDf['TCFPLowerPerUser']))
-        XY = XY[np.argsort(XY[:, 0])]
-
-        X = XY[:,0].reshape(-1,1)
-        Y = XY[:,1].reshape(-1,1)
-
-        # X
-        print(min(X), max(X))
-
-        # poly = PolynomialFeatures(degree=2, include_bias=False)
-        # poly_features = poly.fit_transform(X)
-        # regressor = TweedieRegressor(power=1, alpha=0.5, link='log')  # create object for the class
-        regressor = LinearRegression()
-        regressor.fit(X, 1/ (np.power(Y, Config.POWERFUNCTIONFORREGRESSION)))
-        print(regressor.score(X, 1/ (np.power(Y, Config.POWERFUNCTIONFORREGRESSION))))
-        # regressor.fit(X, Y)  # perform linear regression
-        predictedY = regressor.predict(X)
-        YPred = 1/ (np.power(predictedY, 1/Config.POWERFUNCTIONFORREGRESSION))
-
-        # YPred = 1 / regressor.predict(X)
-
-        # fit = np.polyfit(X, Y, 2)
-        # fittedFunc =  np.poly1d(fit)
-        # YPred = fittedFunc(X)
-
-
-        print(mean_squared_error(Y[~np.isnan(YPred)], YPred[~np.isnan(YPred)]))
         # print(min(regressor.predict(X)))
 
         resultDf = resultDf.round(2)
+
+        # totalDf = pd.concat([totalDf, resultDf]).groupby(['time']).sum().reset_index()
+        totalDf = totalDf.add(resultDf, fill_value=0)
+        totalDf[['mu', 'maxUsers', 'ci']] = resultDf[['mu', 'maxUsers', 'ci']]
 
         if True:
             #make it cummalative
@@ -134,8 +129,8 @@ def start(serversInfo : dict):
             # plt.get_current_fig_manager().window.wm_geometry("+0+0")
             resultDf.plot(use_index=True, y=['ci'])
             plt.get_current_fig_manager().window.wm_geometry("+800+0")
-            resultDf.plot.scatter(x='maxUsers', y='TCFPLowerPerUser', c='DarkBlue', title='New algorithm')
-            plt.plot(X, YPred, color='red')
+            resultDf.plot.scatter(x='maxUsers', y='TCFPUpperPerUser', c='DarkBlue', title='New algorithm')
+            plt.plot(XPred, YPred, color='red')
 
             # resultDf['ci'] *= 1000
             # usefullData.plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'])
@@ -149,4 +144,7 @@ def start(serversInfo : dict):
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
         resultDf.to_csv(csvPath, sep=';')
         break
+
+    csvPath = path.join(Config.DATAPATH, 'output', 'total.csv')
+    totalDf.to_csv(csvPath, sep=';')
     plt.show()
