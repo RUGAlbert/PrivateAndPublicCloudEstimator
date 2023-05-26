@@ -8,6 +8,11 @@ from sklearn import linear_model
 import logging
 
 def readServerStatistics() -> DataFrame:
+    """Reads the server statistics needed for the determination
+
+    Returns:
+        DataFrame: the preprocessed data
+    """    
     cpuDf = pd.read_csv(path.join(Config.DATAPATH, 'FDX_week_CPU.csv'), sep=',', skiprows=1)
     diskDf = pd.read_csv(path.join(Config.DATAPATH, 'FDX_week_Disk.csv'), sep=',', skiprows=1)
     memDf = pd.read_csv(path.join(Config.DATAPATH, 'FDX_week_MEM.csv'), sep=',', skiprows=1)
@@ -22,7 +27,14 @@ def readServerStatistics() -> DataFrame:
     result['Time'] = result['Time'].dt.tz_localize(None)
     return result
 
-def calculateParametersOfServer(serverInfo : dict) -> DataFrame:
+def calculateParametersOfServer(serverInfo : dict) -> None:
+    """Calculates the cooefficients and intercipt of the regression
+
+    Args:
+        serverInfo (dict): The dictonary with all the serverinfo
+
+    Returns: nothing
+    """    
     serverEnergyDf = pd.read_csv(path.join(Config.DATAPATH, serverInfo['powerServerFile']), sep=',', skiprows=1)
     serverDf = wattToEServer(serverEnergyDf)
     serverDf['Time'] = serverDf.index

@@ -4,9 +4,27 @@ from . import scope1, scope2, scope3
 from ..config import Config
 
 def calculateMultitenancyShare(serverInfo : dict, monthlyPowerConsumption : float, avgCarbonIntensity : float) -> float:
+    """Calculates the multitenancy share for the tenant
+
+    Args:
+        serverInfo (dict): The dictonary with all the serverinfo
+        monthlyPowerConsumption (float): the monthly consumption in wh of the server 
+        avgCarbonIntensity (float): the average carbon intensity of the month
+
+    Returns:
+        float: the multenancy share, a value between 0 and 1
+    """    
     return (monthlyPowerConsumption * avgCarbonIntensity) / serverInfo['DCEmissions']['scope2']
 
 def calculateEmmisionsOfServer(serverInfo : dict) -> DataFrame:
+    """Calculates the emissions of the server. 
+
+    Args:
+        serverInfo (dict): The dictonary with all the serverinfo
+
+    Returns:
+        DataFrame: returns the hourly emissions in a dataframe
+    """    
     # scopes energy
     # calculate scope 2 energy usage
     result = scope2.calculate(serverInfo)

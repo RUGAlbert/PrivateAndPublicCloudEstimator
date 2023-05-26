@@ -21,11 +21,21 @@ from .config import Config
 
 
 def createOutputFolder():
+    """Creates output folder for the csv files
+    """    
     outputFolder = path.join(Config.DATAPATH, 'output')
     if not os.path.exists(outputFolder):
         os.makedirs(outputFolder)
 
 def calculateConcurrentUsers(serversInfo : dict) -> DataFrame:
+    """Calculates the concurrent users
+
+    Args:
+        serversInfo (dict): The dictonary with all the serverinfo
+
+    Returns:
+        DataFrame: the hourly concurrent users
+    """    
     userLoginDataDf = pd.read_csv(path.join(Config.DATAPATH, serversInfo['concurrentUsersFile']), sep=',', skiprows=1)
 
     userLoginDataDf['start_time'] = pd.to_datetime(userLoginDataDf['LoginDate'] + " " + userLoginDataDf['LoginTime (GMT)'])
@@ -61,6 +71,14 @@ def calculateConcurrentUsers(serversInfo : dict) -> DataFrame:
 
 
 def preprocessConcurrentUsers(serversInfo : dict) -> DataFrame:
+    """Make sure the raw max user data is in the right format for the rest of the program
+
+    Args:
+        serversInfo (dict): The dictonary with all the serverinfo
+
+    Returns:
+        DataFrame: the maxium concurrent users per hour
+    """    
     concurrentUserDf = pd.read_csv(path.join(Config.DATAPATH, serversInfo['concurrentUsersFile']), sep=',', skiprows=1)
     concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%d/%m/%Y %H:%M:%S")
     concurrentUserDf['time'] = concurrentUserDf['DateTime']
@@ -70,8 +88,37 @@ def preprocessConcurrentUsers(serversInfo : dict) -> DataFrame:
 
     return concurrentUserDf
 
+def calculateScore(regressor : LinearRegression) -> float:
+    """Calculates the score of the regression based on the 
+     relation between total carbon footprint and maxusers 
 
-def doLinearRegression(resultDf : DataFrame) -> Tuple[DataFrame, DataFrame]:     #do the linear regression
+    Args:
+        regressor (LinearRegression): the regressor which estimats the line 
+        for the relationship between the total carbon footprint per user and the maxusers
+
+    Returns:
+        float: the score 
+    """    
+    xStart = 15
+    xEnd = 175
+    predictedY = regressor.predict(np.arange(xStart, xEnd).reshape(-1,1))
+
+    YPred = 1/ (np.power(predictedY, 1/Config.POWERFUNCTIONFORREGRESSION))
+
+    score = np.sum(YPred) / (xEnd-xStart)
+    print("score", score) 
+
+    return score
+
+def doLinearRegression(resultDf : DataFrame) -> Tuple[DataFrame, DataFrame]:
+    """Make the linear regression between the totalcarbon footprint per user and the maxusers
+
+    Args:
+        resultDf (DataFrame): the df which also has the columns tcf per user and maxusers per hour
+
+    Returns:
+        Tuple[DataFrame, DataFrame]: returns the x and y data for the prediction
+    """    
 
     # X = (resultDf['maxUsers'].iloc[:].values.reshape(-1, 1))  # values converts it into a numpy array
     # Y = (resultDf['TCFPLowerPerUser'].iloc[:].values.reshape(-1, 1))
@@ -88,9 +135,15 @@ def doLinearRegression(resultDf : DataFrame) -> Tuple[DataFrame, DataFrame]:    
     predictedY = regressor.predict(X)
     print("Cooefficent", regressor.coef_)
     YPred = 1/ (np.power(predictedY, 1/Config.POWERFUNCTIONFORREGRESSION))
+    calculateScore(regressor)
     return X, YPred
 
 def start(serversInfo : dict):
+    """Calculate the emissions and save it to the csv files
+
+    Args:
+        serversInfo (dict): the info for all the servers
+    """    
     createOutputFolder()
     # calculateConcurrentUsers(serversInfo)
     concurrentUserDf = preprocessConcurrentUsers(serversInfo)

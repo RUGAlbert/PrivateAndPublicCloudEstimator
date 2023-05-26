@@ -12,6 +12,14 @@ from pandas import DataFrame
 
 
 def wattToEServer(rawServerDf : DataFrame) -> DataFrame:
+    """Translates the watt usage per minute to wh
+
+    Args:
+        rawServerDf (DataFrame): the raw watt data per minute
+
+    Returns:
+        DataFrame: returns a dataframe with hourly wh data
+    """    
     prunnedRawServerDf = rawServerDf[['time','Platform-Curr', 'CPU-Curr', 'Mem-Curr']].copy()
 
     #conversion from watts to kwh
@@ -28,6 +36,14 @@ def wattToEServer(rawServerDf : DataFrame) -> DataFrame:
 
 
 def calculateNetwork(serverInfo : dict) -> DataFrame:
+    """Calculates the amount of network usage in bytes
+
+    Args:
+        serverInfo (dict): The dictonary with all the serverinfo
+
+    Returns:
+        DataFrame: returns hourly data of network usage in bytes
+    """    
     networkUsageDf = pd.read_csv(path.join(Config.DATAPATH, serverInfo['networkUsageFile']), sep=',', skiprows=1)
     networkUsageDf['time'] = pd.to_datetime(networkUsageDf['time'], unit='s')
     # networkUsageDf = networkUsageDf[(networkUsageDf['time'] >= '2023-03-27') & (networkUsageDf['time'] <= '2023-04-04')]
@@ -39,7 +55,14 @@ def calculateNetwork(serverInfo : dict) -> DataFrame:
     return networkUsageDf
 
 def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
+    """Calculates the energy consumption used by the server and other sources
 
+    Args:
+        serverInfo (dict): The dictonary with all the serverinfo
+
+    Returns:
+        DataFrame: a dataframe with the hourly energy consumption
+    """
     # result = wattToEServer(rawDataDf)
     result = pd.read_csv(path.join(Config.DATAPATH, serverInfo['powerServerFile']), sep=',', skiprows=1)
     result.loc[:, "time"] = pd.to_datetime(result["time"], format="%d/%m/%Y %H:%M")
@@ -77,6 +100,14 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
     return result
 
 def calculate(serverInfo : dict) -> DataFrame:
+    """Calculates the scope 2 emissions
+
+    Args:
+        serverInfo (dict): The dictonary with all the serverinfo
+
+    Returns:
+        DataFrame: returns the hourly scope 2 emissions data
+    """    
     result = calculateEnergyConsumption(serverInfo)
 
     carbonIntensityDf =  pd.read_csv(path.join(Config.DATAPATH, serverInfo['carbonIntensityFile']), sep=',', skiprows=1)
