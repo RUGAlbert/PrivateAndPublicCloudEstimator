@@ -49,7 +49,7 @@ def calculateNetwork(serverInfo : dict) -> DataFrame:
     # networkUsageDf = networkUsageDf[(networkUsageDf['time'] >= '2023-03-27') & (networkUsageDf['time'] <= '2023-04-04')]
     networkUsageDf = networkUsageDf.resample('60min', on='time').mean().interpolate('time')
     #divided by two since there are two servers
-    networkUsageDf['bytesMoved'] = (networkUsageDf['in'] + networkUsageDf['out']) * 60 * 60 / 2
+    networkUsageDf['bytesMoved'] = (networkUsageDf['in'] + networkUsageDf['out']) * 60 * 60 / serverInfo['amountNetworkIsSharedBy']
     networkUsageDf = networkUsageDf[['bytesMoved']]
     networkUsageDf = networkUsageDf[networkUsageDf['bytesMoved'] > 1000]
     return networkUsageDf

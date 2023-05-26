@@ -12,11 +12,11 @@ def readServerStatistics() -> DataFrame:
 
     Returns:
         DataFrame: the preprocessed data
-    """    
+    """
     cpuDf = pd.read_csv(path.join(Config.DATAPATH, 'FDX_week_CPU.csv'), sep=',', skiprows=1)
     diskDf = pd.read_csv(path.join(Config.DATAPATH, 'FDX_week_Disk.csv'), sep=',', skiprows=1)
     memDf = pd.read_csv(path.join(Config.DATAPATH, 'FDX_week_MEM.csv'), sep=',', skiprows=1)
-    
+
     result = cpuDf[['Time']].copy()
     result['cpu'] = cpuDf['Usage']
     result['disk'] = diskDf['Usage']
@@ -34,7 +34,7 @@ def calculateParametersOfServer(serverInfo : dict) -> None:
         serverInfo (dict): The dictonary with all the serverinfo
 
     Returns: nothing
-    """    
+    """
     serverEnergyDf = pd.read_csv(path.join(Config.DATAPATH, serverInfo['powerServerFile']), sep=',', skiprows=1)
     serverDf = wattToEServer(serverEnergyDf)
     serverDf['Time'] = serverDf.index
