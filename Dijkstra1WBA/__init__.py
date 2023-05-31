@@ -106,9 +106,14 @@ def calculateScore(regressor : LinearRegression) -> float:
     YPred = 1/ (np.power(predictedY, 1/Config.POWERFUNCTIONFORREGRESSION))
 
     score = np.sum(YPred) / (xEnd-xStart)
-    print("score", score) 
-
+    print("score", score)
     return score
+
+
+def calculatePercentile(regressor : LinearRegression, X : DataFrame, percentile : float) -> float:
+    xVal = X[int(len(X)/100*percentile)]
+    yVal = 1/ (np.power(regressor.predict((xVal,)), 1/Config.POWERFUNCTIONFORREGRESSION))
+    return yVal
 
 def doLinearRegression(resultDf : DataFrame) -> Tuple[DataFrame, DataFrame]:
     """Make the linear regression between the totalcarbon footprint per user and the maxusers
@@ -136,6 +141,9 @@ def doLinearRegression(resultDf : DataFrame) -> Tuple[DataFrame, DataFrame]:
     print("Cooefficent", regressor.coef_)
     YPred = 1/ (np.power(predictedY, 1/Config.POWERFUNCTIONFORREGRESSION))
     calculateScore(regressor)
+    print("95 procent is less than", calculatePercentile(regressor, X, 5))
+    print("50 procent is less than", calculatePercentile(regressor, X, 50))
+    print("5 procent is less than", calculatePercentile(regressor, X, 95))
     return X, YPred
 
 def start(serversInfo : dict):

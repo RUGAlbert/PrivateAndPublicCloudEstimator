@@ -83,7 +83,7 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
     avgMax = np.mean(peaks)
     # result['mu'] = result['mu'].rolling(window=30).mean().shift(1)
     # result['eNetworkStatic'] = result['mu'] * result['eNetwork']
-    result['eNetworkStatic'] = avgMax * Config.MU + serverInfo['backupNetworkEquipmentPowerUsage']
+    result['eNetworkStatic'] = avgMax * Config.MU + serverInfo['backupNetworkEquipmentPowerUsage'] / serverInfo['amountNetworkIsSharedBy']
     result['eNetworkDynamic'] = (1 - result['mu']) * result['eNetwork']
     result['eNetworkCalculatedWithConstant'] = result['eNetwork']
     result['eNetworkWithNewAlgorithm'] =  result['eNetworkStatic'] + result['eNetworkDynamic']
