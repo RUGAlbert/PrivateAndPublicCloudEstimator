@@ -127,7 +127,7 @@ def doLinearRegression(resultDf : DataFrame) -> Tuple[DataFrame, DataFrame]:
 
     # X = (resultDf['maxUsers'].iloc[:].values.reshape(-1, 1))  # values converts it into a numpy array
     # Y = (resultDf['TCFPLowerPerUser'].iloc[:].values.reshape(-1, 1))
-    XY = np.column_stack((resultDf['maxUsers'], resultDf['TCFPUpperPerUser']))
+    XY = np.column_stack((resultDf['maxUsers'], resultDf['scope2EPerUser']))
     XY = XY[np.argsort(XY[:, 0])]
 
     X = XY[:,0].reshape(-1,1)
@@ -170,6 +170,7 @@ def start(serversInfo : dict):
         #normalize data
         resultDf['TCFPLowerPerUser'] = resultDf['TCFPLower'] / resultDf['maxUsers']
         resultDf['TCFPUpperPerUser'] = resultDf['TCFPUpper'] / resultDf['maxUsers']
+        resultDf['scope2EPerUser'] = resultDf['scope2E'] / resultDf['maxUsers']
 
         XPred, YPred = doLinearRegression(resultDf)
 
@@ -178,34 +179,48 @@ def start(serversInfo : dict):
         resultDf = resultDf.round(2)
 
         # totalDf = pd.concat([totalDf, resultDf]).groupby(['time']).sum().reset_index()
-        totalDf = totalDf.add(resultDf, fill_value=0)
+        if(len(totalDf) > 0):
+            totalDf = totalDf.add(resultDf[resultDf.index.isin(totalDf.index)], fill_value=0)
+        else:
+            totalDf = totalDf.add(resultDf, fill_value=0)
         totalDf[['mu', 'maxUsers', 'ci']] = resultDf[['mu', 'maxUsers', 'ci']]
+        totalDf = totalDf[totalDf.index.isin(resultDf.index)]
+        print(len(totalDf))
 
-        if True:
+
+        if False:
             #make it cummalative
             cumDf = resultDf.groupby(resultDf.index.to_period('m')).cumsum()
             # cumDf[(cumDf['maxUsers'] > 1) & cumDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
 
             # usefullData = resultDf[(resultDf['maxUsers'] > 1) & (resultDf['eNetworkDynamic'] > 0)]
             # plt.get_current_fig_manager().window.wm_geometry("+0+0")
-            resultDf.plot(use_index=True, y=['ci'])
-            plt.get_current_fig_manager().window.wm_geometry("+800+0")
-            resultDf.plot.scatter(x='maxUsers', y='TCFPUpperPerUser', c='DarkBlue', title='New algorithm')
-            plt.plot(XPred, YPred, color='red')
+            # resultDf.plot(use_index=True, y=['ci'])
+            # plt.get_current_fig_manager().window.wm_geometry("+800+0")
+            # resultDf.plot.scatter(x='maxUsers', y='TCFPUpperPerUser', c='DarkBlue', title='New algorithm'))
+            # plt.plot(XPred, YPred, color='red')
 
             # resultDf['ci'] *= 1000
-            # usefullData.plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'])
+            # resultDf.plot(use_index=True, y=['TCFPLowerPerUser', 'TCFPUpperPerUser'])
             # usefullData.plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
 
             # plt.get_current_fig_manager().window.wm_geometry("+0+500")
-            # _, ax = plt.subplots()
-            # resultDf.plot(use_index=True, y=['eNetworkWithNewAlgorithm', 'eNetworkCalculatedWithConstant'], ax = ax, title='Dynamic mu')
-            # resultDf.plot(use_index=True, y=['mu'], ax = ax, secondary_y = True)
+            _, ax = plt.subplots()
+            resultDf.plot(use_index=True, y=['eNetworkWithNewAlgorithm', 'eNetworkCalculatedWithConstant'], ax = ax, ylabel="total power usage in wH", legend=True)
+            resultDf.plot(use_index=True, y=['mu'], ax = ax, secondary_y = True, ylabel="max users per hour", legend=True)
             plt.get_current_fig_manager().window.wm_geometry("+800+500")
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
         resultDf.to_csv(csvPath, sep=';')
-        break
+        # break
 
+    # totalDf['maxUsers'].dropna()
+    print(totalDf)
+    XPred, YPred = doLinearRegression(totalDf)
+    # _, ax = plt.subplots()
+    # totalDf.plot(use_index=True, y=['scope2E'], ax = ax, ylabel="total power usage in wH", legend=False)
+    # totalDf.plot(use_index=True, y=['maxUsers'], ax = ax, secondary_y = True, ylabel="max users per hour", legend=False)
+    totalDf.plot.scatter(x='maxUsers', y='scope2EPerUser', c='DarkBlue', title='New algorithm')
+    plt.plot(XPred, YPred, color='red')
     csvPath = path.join(Config.DATAPATH, 'output', 'total.csv')
     totalDf.to_csv(csvPath, sep=';')
     plt.show()

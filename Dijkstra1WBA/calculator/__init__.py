@@ -39,6 +39,6 @@ def calculateEmmisionsOfServer(serverInfo : dict) -> DataFrame:
     result['TCFPLower'] = result['scope1'] + result['scope2Lower'] + result['scope3']
     result['TCFPUpper'] = result['scope1'] + result['scope2Upper'] + result['scope3']
     
-    result = result[['eNetworkWithNewAlgorithm', 'eNetworkCalculatedWithConstant', 'nu', 'mu','eServerStatic', 'eServerDynamic', 'eNetworkStatic', 'eNetworkDynamic', 'eCoolingStatic', 'eCoolingDynamic', 'scope1', 'scope2Lower', 'scope2Upper', 'scope3', 'TCFPLower', 'TCFPUpper', 'ci']]
+    result = result[['eNetworkWithNewAlgorithm', 'eNetworkCalculatedWithConstant', 'scope2E', 'mu','eServerStatic', 'eServerDynamic', 'eNetworkStatic', 'eNetworkDynamic', 'eCoolingStatic', 'eCoolingDynamic', 'scope1', 'scope2Lower', 'scope2Upper', 'scope3', 'TCFPLower', 'TCFPUpper', 'ci']]
     result.sort_index(inplace=True)
     return result
