@@ -20,18 +20,20 @@ def wattToEServer(rawServerDf : DataFrame) -> DataFrame:
     Returns:
         DataFrame: returns a dataframe with hourly wh data
     """
-    prunnedRawServerDf = rawServerDf[['time','Platform-Curr', 'CPU-Curr', 'Mem-Curr']].copy()
+    # print(rawServerDf)
+    prunnedRawServerDf = rawServerDf[['Time','Platform-Curr', 'CPU-Curr', 'Mem-Curr']].copy()
 
     #conversion from watts to kwh
-    prunnedRawServerDf.loc[:, 'Duration'] = -pd.to_datetime(prunnedRawServerDf['time'], errors='coerce').diff(-1).dt.total_seconds()
+    prunnedRawServerDf.loc[:, 'Duration'] = -pd.to_datetime(prunnedRawServerDf['Time'], errors='coerce').diff(-1).dt.total_seconds()
     prunnedRawServerDf.drop(prunnedRawServerDf.tail(1).index,inplace=True)
     prunnedRawServerDf.loc[:, 'DurationInHours'] = prunnedRawServerDf['Duration'] / 3600
-    prunnedRawServerDf.loc[:, 'eServer'] = prunnedRawServerDf['DurationInHours'] * prunnedRawServerDf['Platform-Curr']
+    prunnedRawServerDf.loc[:, 'watts'] = prunnedRawServerDf['DurationInHours'] * prunnedRawServerDf['Platform-Curr']
 
     #group by hour
-    serverDataDf = prunnedRawServerDf[['time', 'eServer']].copy()
-    serverDataDf.loc[:, "time"] = pd.to_datetime(serverDataDf["time"])
+    serverDataDf = prunnedRawServerDf[['Time', 'watts']].copy()
+    serverDataDf.loc[:, "time"] = pd.to_datetime(serverDataDf["Time"])
     serverDataDf = serverDataDf.resample('60min', on='time').sum()
+
     return serverDataDf
 
 
@@ -51,7 +53,7 @@ def calculateNetwork(serverInfo : dict) -> DataFrame:
     #divided by two since there are two servers
     networkUsageDf['bytesMoved'] = (networkUsageDf['in'] + networkUsageDf['out']) * 60 * 60 / serverInfo['amountNetworkIsSharedBy']
     networkUsageDf = networkUsageDf[['bytesMoved']]
-    networkUsageDf = networkUsageDf[networkUsageDf['bytesMoved'] > 1000]
+    # networkUsageDf = networkUsageDf[networkUsageDf['bytesMoved'] > 1000]
     return networkUsageDf
 
 def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
@@ -63,10 +65,12 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
     Returns:
         DataFrame: a dataframe with the hourly energy consumption
     """
-    # result = wattToEServer(rawDataDf)
     result = pd.read_csv(path.join(Config.DATAPATH, serverInfo['powerServerFile']), sep=',', skiprows=1)
-    result.loc[:, "time"] = pd.to_datetime(result["time"], format="%d/%m/%Y %H:%M")
-    result = result.set_index('time')
+    if Config.useMinuteDataForPower:
+        result = wattToEServer(result)
+    else:
+        result.loc[:, "time"] = pd.to_datetime(result["time"], format="%d/%m/%Y %H:%M")
+        result = result.set_index('time')
     result.sort_index(inplace=True)
     result['eServer'] = result['watts']
     result['eServerStatic'] = serverInfo['energyServerStatic']

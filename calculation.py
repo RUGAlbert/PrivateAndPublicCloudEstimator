@@ -5,6 +5,11 @@ import pandas as pd
 
 import Dijkstra1WBA, Dijkstra2Cisco
 from Dijkstra1WBA.eServerStaticCalculator import calculateParametersOfServer
+from Dijkstra1WBA.config import Config
+from extra import createPlots
+
+# createPlots.start()
+# exit()
 
 with open(path.join('data', 'cisco', 'serverInfo.json'), encoding='utf-8') as f:
     ciscoData = json.load(f)
@@ -12,8 +17,11 @@ with open(path.join('data', 'cisco', 'serverInfo.json'), encoding='utf-8') as f:
 with open(path.join('data', 'monthData', 'serverInfo.json'), encoding='utf-8') as f:
     monthData = json.load(f)
 
+with open(path.join(Config.DATAPATH, 'serverInfo.json'), encoding='utf-8') as f:
+    data = json.load(f)
+
 # print(data)
-Dijkstra1WBA.start(monthData)
+Dijkstra1WBA.start(data)
 # Dijkstra2Cisco.start(ciscoData)
 # calculateParametersOfServer(data['servers'][0])
 

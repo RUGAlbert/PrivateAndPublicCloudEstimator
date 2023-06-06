@@ -80,15 +80,17 @@ def preprocessConcurrentUsers(serversInfo : dict) -> DataFrame:
         DataFrame: the maxium concurrent users per hour
     """    
     concurrentUserDf = pd.read_csv(path.join(Config.DATAPATH, serversInfo['concurrentUsersFile']), sep=',', skiprows=1)
-    concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%d/%m/%Y %H:%M:%S")
-    concurrentUserDf['time'] = concurrentUserDf['DateTime']
-    concurrentUserDf['maxUsers'] = concurrentUserDf['Peak']
+    # concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%d/%m/%Y %H:%M:%S")
+    concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%Y-%m-%d %H:%M:%S")
+    concurrentUserDf['time'] = concurrentUserDf['DateTime'] - timedelta(serversInfo['userTZ'])
+    concurrentUserDf['maxUsers'] = concurrentUserDf['Loggedin']
     concurrentUserDf = concurrentUserDf[['time', 'maxUsers']]
     concurrentUserDf = concurrentUserDf.resample('60min', on='time').max()
+    concurrentUserDf['maxUsers'].replace(0, 1, inplace=True)
 
     return concurrentUserDf
 
-def calculateScore(regressor : LinearRegression) -> float:
+def calculateScore(regressor : LinearRegression, xStart : float, xEnd : float) -> float:
     """Calculates the score of the regression based on the 
      relation between total carbon footprint and maxusers 
 
@@ -99,14 +101,12 @@ def calculateScore(regressor : LinearRegression) -> float:
     Returns:
         float: the score 
     """    
-    xStart = 15
-    xEnd = 175
     predictedY = regressor.predict(np.arange(xStart, xEnd).reshape(-1,1))
 
     YPred = 1/ (np.power(predictedY, 1/Config.POWERFUNCTIONFORREGRESSION))
 
     score = np.sum(YPred) / (xEnd-xStart)
-    print("score", score)
+    print("Area score", score)
     return score
 
 
@@ -133,17 +133,29 @@ def doLinearRegression(resultDf : DataFrame) -> Tuple[DataFrame, DataFrame]:
     X = XY[:,0].reshape(-1,1)
     Y = XY[:,1].reshape(-1,1)
 
+    #Get best powerfunction
+
+    bestScore = 0
+
+    for pwr in np.arange(Config.PWRFUNCREGMIN, Config.PWRFUNCREGMAX, 0.05):
+        regressor = LinearRegression()
+        regressor.fit(X, 1/ (np.power(Y, pwr)))
+        curScore = regressor.score(X, 1/ (np.power(Y, pwr)))
+        if curScore > bestScore:
+            bestScore = curScore
+            Config.POWERFUNCTIONFORREGRESSION = pwr
+    
     regressor = LinearRegression()
     regressor.fit(X, 1/ (np.power(Y, Config.POWERFUNCTIONFORREGRESSION)))
-    print(regressor.score(X, 1/ (np.power(Y, Config.POWERFUNCTIONFORREGRESSION))))
     # regressor.fit(X, Y)  # perform linear regression
+    print("mSQR of ", bestScore, "for a n-value of ", Config.POWERFUNCTIONFORREGRESSION)
     predictedY = regressor.predict(X)
-    print("Cooefficent", regressor.coef_)
+    print("Coefficient", regressor.coef_)
     YPred = 1/ (np.power(predictedY, 1/Config.POWERFUNCTIONFORREGRESSION))
-    calculateScore(regressor)
-    print("95 procent is less than", calculatePercentile(regressor, X, 5))
-    print("50 procent is less than", calculatePercentile(regressor, X, 50))
-    print("5 procent is less than", calculatePercentile(regressor, X, 95))
+    calculateScore(regressor, min(X), max(X))
+    print("95 percent is less than", calculatePercentile(regressor, X, 5))
+    print("50 percent is less than", calculatePercentile(regressor, X, 50))
+    print("5 percent is less than", calculatePercentile(regressor, X, 95))
     return X, YPred
 
 def start(serversInfo : dict):
@@ -165,14 +177,16 @@ def start(serversInfo : dict):
         print(server['name'])
         emmisionsOfServer = calculateEmmisionsOfServer(server)
         resultDf = emmisionsOfServer.merge(concurrentUserDf, how='left', on='time').sort_values(by='time')
-        resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
-        resultDf = resultDf[(resultDf['maxUsers'] > 1) & (resultDf['eNetworkDynamic'] > 0)]
+        # resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
+        # resultDf = resultDf[(~resultDf['maxUsers'].isna()) & (resultDf['eNetworkDynamic'] > 0)]
+        resultDf = resultDf[(~resultDf['maxUsers'].isna())]
+        print(resultDf)
         #normalize data
         resultDf['TCFPLowerPerUser'] = resultDf['TCFPLower'] / resultDf['maxUsers']
         resultDf['TCFPUpperPerUser'] = resultDf['TCFPUpper'] / resultDf['maxUsers']
         resultDf['scope2EPerUser'] = resultDf['scope2E'] / resultDf['maxUsers']
 
-        XPred, YPred = doLinearRegression(resultDf)
+        # XPred, YPred = doLinearRegression(resultDf)
 
         # print(min(regressor.predict(X)))
 
@@ -185,7 +199,6 @@ def start(serversInfo : dict):
             totalDf = totalDf.add(resultDf, fill_value=0)
         totalDf[['mu', 'maxUsers', 'ci']] = resultDf[['mu', 'maxUsers', 'ci']]
         totalDf = totalDf[totalDf.index.isin(resultDf.index)]
-        print(len(totalDf))
 
 
         if False:
@@ -219,7 +232,9 @@ def start(serversInfo : dict):
     # _, ax = plt.subplots()
     # totalDf.plot(use_index=True, y=['scope2E'], ax = ax, ylabel="total power usage in wH", legend=False)
     # totalDf.plot(use_index=True, y=['maxUsers'], ax = ax, secondary_y = True, ylabel="max users per hour", legend=False)
-    totalDf.plot.scatter(x='maxUsers', y='scope2EPerUser', c='DarkBlue', title='New algorithm')
+    plt.hist(totalDf['maxUsers'], bins=int((max(totalDf['maxUsers']) - min(totalDf['maxUsers']))/10))
+    plt.show()
+    totalDf.plot.scatter(x='maxUsers', y='scope2EPerUser', c='DarkBlue', xlabel="amount of max users per hour", ylabel="power consumption per user in watt")
     plt.plot(XPred, YPred, color='red')
     csvPath = path.join(Config.DATAPATH, 'output', 'total.csv')
     totalDf.to_csv(csvPath, sep=';')

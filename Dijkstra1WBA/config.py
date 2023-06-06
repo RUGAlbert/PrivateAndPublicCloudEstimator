@@ -6,7 +6,7 @@ class Config():
     CARBONINTENSITY = 1.4
     WHPERBYTE = 6e-8
 
-    DATAPATH = path.join('data', 'monthData')
+    DATAPATH = path.join('data', 'comp', 'LARGE_FDX')
 
     ZETA_LOWER = 1
     GAMMA_LOWER = 0
@@ -21,4 +21,9 @@ class Config():
     USEHOURLYCARBON = False
 
     #1.27
-    POWERFUNCTIONFORREGRESSION = 1.65
+    POWERFUNCTIONFORREGRESSION = 1.6
+
+    PWRFUNCREGMIN = 1
+    PWRFUNCREGMAX = 2
+
+    useMinuteDataForPower = True
