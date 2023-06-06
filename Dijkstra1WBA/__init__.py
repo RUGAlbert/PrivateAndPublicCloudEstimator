@@ -82,7 +82,7 @@ def preprocessConcurrentUsers(serversInfo : dict) -> DataFrame:
     concurrentUserDf = pd.read_csv(path.join(Config.DATAPATH, serversInfo['concurrentUsersFile']), sep=',', skiprows=1)
     # concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%d/%m/%Y %H:%M:%S")
     concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%Y-%m-%d %H:%M:%S")
-    concurrentUserDf['time'] = concurrentUserDf['DateTime'] - timedelta(serversInfo['userTZ'])
+    concurrentUserDf['time'] = concurrentUserDf['DateTime'] - timedelta(hours=serversInfo['userTZ'])
     concurrentUserDf['maxUsers'] = concurrentUserDf['Loggedin']
     concurrentUserDf = concurrentUserDf[['time', 'maxUsers']]
     concurrentUserDf = concurrentUserDf.resample('60min', on='time').max()
@@ -180,7 +180,6 @@ def start(serversInfo : dict):
         # resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
         # resultDf = resultDf[(~resultDf['maxUsers'].isna()) & (resultDf['eNetworkDynamic'] > 0)]
         resultDf = resultDf[(~resultDf['maxUsers'].isna())]
-        print(resultDf)
         #normalize data
         resultDf['TCFPLowerPerUser'] = resultDf['TCFPLower'] / resultDf['maxUsers']
         resultDf['TCFPUpperPerUser'] = resultDf['TCFPUpper'] / resultDf['maxUsers']
