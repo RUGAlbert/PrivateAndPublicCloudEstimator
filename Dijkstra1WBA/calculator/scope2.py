@@ -37,7 +37,7 @@ def wattToEServer(rawServerDf : DataFrame) -> DataFrame:
     return serverDataDf
 
 
-def calculateNetwork(serverInfo : dict) -> DataFrame:
+def calculateNetwork(filename : str, amountNetworkIsSharedBy : int) -> DataFrame:
     """Calculates the amount of network usage in bytes
 
     Args:
@@ -46,14 +46,34 @@ def calculateNetwork(serverInfo : dict) -> DataFrame:
     Returns:
         DataFrame: returns hourly data of network usage in bytes
     """
-    networkUsageDf = pd.read_csv(path.join(Config.DATAPATH, serverInfo['networkUsageFile']), sep=',', skiprows=1)
+    networkUsageDf = pd.read_csv(path.join(Config.DATAPATH, filename), sep=',', skiprows=1)
     networkUsageDf['time'] = pd.to_datetime(networkUsageDf['time'], unit='s')
     # networkUsageDf = networkUsageDf[(networkUsageDf['time'] >= '2023-03-27') & (networkUsageDf['time'] <= '2023-04-04')]
     networkUsageDf = networkUsageDf.resample('60min', on='time').mean().interpolate('time')
     #divided by two since there are two servers
-    networkUsageDf['bytesMoved'] = (networkUsageDf['in'] + networkUsageDf['out']) * 60 * 60 / serverInfo['amountNetworkIsSharedBy']
+    networkUsageDf['bytesMoved'] = (networkUsageDf['in'] + networkUsageDf['out']) * 60 * 60 / amountNetworkIsSharedBy
     networkUsageDf = networkUsageDf[['bytesMoved']]
     # networkUsageDf = networkUsageDf[networkUsageDf['bytesMoved'] > 1000]
+    return networkUsageDf
+
+def calculateNetworkEnergyConsumption(filename : str, amountNetworkIsSharedBy : int, backupNetworkEquipmentPowerUsage : int):
+    networkUsageDf = calculateNetwork(filename, amountNetworkIsSharedBy)
+
+    networkUsageDf['bytesMoved'] = networkUsageDf['bytesMoved'].fillna(0)
+    networkUsageDf['eNetwork'] = networkUsageDf['bytesMoved'] * Config.WHPERBYTE
+    peaks = networkUsageDf[networkUsageDf['eNetwork'] > 0].resample('D')['eNetwork'].max()
+    valleys = networkUsageDf[networkUsageDf['eNetwork'] > 0].resample('D')['eNetwork'].min()
+    avgMax = np.median(peaks)
+    avgMin = np.median(valleys)
+    networkUsageDf['mu'] = 1 - (1 - Config.MU) * (networkUsageDf['eNetwork'] - avgMin ) / avgMax
+    networkUsageDf.loc[networkUsageDf['mu'] < 0.81, 'mu'] = 0.81
+    networkUsageDf.loc[networkUsageDf['mu'] > 1, 'mu'] = 1
+    networkUsageDf['eNetworkStatic'] = avgMax * Config.MU + backupNetworkEquipmentPowerUsage / amountNetworkIsSharedBy
+    networkUsageDf['eNetworkDynamic'] = (1 - networkUsageDf['mu']) * networkUsageDf['eNetwork']
+    networkUsageDf['eNetworkCalculatedWithConstant'] = networkUsageDf['eNetwork']
+    networkUsageDf['eNetwork'] =  networkUsageDf['eNetworkStatic'] + networkUsageDf['eNetworkDynamic']
+
+    print(networkUsageDf)
     return networkUsageDf
 
 def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
@@ -76,26 +96,25 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
     result['eServerStatic'] = serverInfo['energyServerStatic']
     result['eServerDynamic'] = result['eServer'] - serverInfo['energyServerStatic']
 
-    networkUsageDf = calculateNetwork(serverInfo)
-    result = result.join(networkUsageDf)
+    totalNetworkUsageDf = None
+    if(isinstance(serverInfo['networkUsageFile'], str)) :
+        totalNetworkUsageDf = calculateNetworkEnergyConsumption(serverInfo['networkUsageFile'], serverInfo['amountNetworkIsSharedBy'], serverInfo['backupNetworkEquipmentPowerUsage'])
+    else:
+        for networkFile in serverInfo['networkUsageFile']:
+            networkUsageDf = calculateNetworkEnergyConsumption(networkFile, serverInfo['amountNetworkIsSharedBy'], serverInfo['backupNetworkEquipmentPowerUsage'])
+            if totalNetworkUsageDf is None:
+                totalNetworkUsageDf = networkUsageDf
+            else:
+                totalNetworkUsageDf['eNetwork'] += networkUsageDf['eNetwork']
+                totalNetworkUsageDf['eNetworkStatic'] += networkUsageDf['eNetworkStatic']
+                totalNetworkUsageDf['eNetworkDynamic'] += networkUsageDf['eNetworkDynamic']
+                totalNetworkUsageDf['bytesMoved'] += networkUsageDf['bytesMoved']
 
-
-    result['bytesMoved'] = result['bytesMoved'].fillna(0)
-    result['eNetwork'] = result['bytesMoved'] * Config.WHPERBYTE
-    peaks = result[result['eNetwork'] > 0].resample('D')['eNetwork'].max()
-    valleys = result[result['eNetwork'] > 0].resample('D')['eNetwork'].min()
-    avgMax = np.median(peaks)
-    avgMin = np.median(valleys)
-    result['mu'] = 1 - (1 - Config.MU) * (result['eNetwork'] - avgMin ) / avgMax
-    result.loc[result['mu'] < 0.81, 'mu'] = 0.81
-    print(result[result['mu'] < 0.81]['mu'])
-    result['eNetworkStatic'] = avgMax * Config.MU + serverInfo['backupNetworkEquipmentPowerUsage'] / serverInfo['amountNetworkIsSharedBy']
-    result['eNetworkDynamic'] = (1 - result['mu']) * result['eNetwork']
-    result['eNetworkCalculatedWithConstant'] = result['eNetwork']
-    result['eNetworkWithNewAlgorithm'] =  result['eNetworkStatic'] + result['eNetworkDynamic']
+    result = result.join(totalNetworkUsageDf)
+    print(result)
 
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
-    result['nu'] = (result['eServerStatic'] + result['eNetworkStatic']) / (result['eServer'] + result['eNetworkWithNewAlgorithm'])
+    result['nu'] = (result['eServerStatic'] + result['eNetworkStatic']) / (result['eServer'] + result['eNetwork'])
     result['eCoolingStatic'] = result['nu'] * result['eCooling']
     result['eCoolingDynamic'] = (1 - result['nu']) * result['eCooling']
 
