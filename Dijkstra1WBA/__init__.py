@@ -177,7 +177,7 @@ def start(serversInfo : dict):
         print(server['name'])
         emmisionsOfServer = calculateEmmisionsOfServer(server)
         resultDf = emmisionsOfServer.merge(concurrentUserDf, how='left', on='time').sort_values(by='time')
-        # resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
+        resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
         # resultDf = resultDf[(~resultDf['maxUsers'].isna()) & (resultDf['eNetworkDynamic'] > 0)]
         resultDf = resultDf[(~resultDf['maxUsers'].isna())]
         #normalize data
