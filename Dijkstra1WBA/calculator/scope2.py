@@ -35,7 +35,7 @@ def wattToEServer(rawServerDf : DataFrame) -> DataFrame:
     #group by hour
     serverDataDf = prunnedRawServerDf[['Time', 'watts']].copy()
     serverDataDf.loc[:, "time"] = pd.to_datetime(serverDataDf["Time"])
-    serverDataDf = serverDataDf.resample('60min', on='time').sum()
+    serverDataDf = serverDataDf.resample('60min', on='time').sum(numeric_only=True)
 
     return serverDataDf
 
@@ -56,7 +56,7 @@ def calculateNetwork(filename : str, amountNetworkIsSharedBy : int) -> DataFrame
     #divided by two since there are two servers
     networkUsageDf['bytesMoved'] = (networkUsageDf['in'] + networkUsageDf['out']) * 60 * 60 / amountNetworkIsSharedBy
     networkUsageDf = networkUsageDf[['bytesMoved']]
-    # networkUsageDf = networkUsageDf[networkUsageDf['bytesMoved'] > 1000]
+    networkUsageDf = networkUsageDf[networkUsageDf['bytesMoved'] > 0]
     return networkUsageDf
 
 def calculateNetworkEnergyConsumption(filename : str, amountNetworkIsSharedBy : int, backupNetworkEquipmentPowerUsage : int):
@@ -64,22 +64,20 @@ def calculateNetworkEnergyConsumption(filename : str, amountNetworkIsSharedBy : 
 
     networkUsageDf['bytesMoved'] = networkUsageDf['bytesMoved'].fillna(0)
     networkUsageDf['eNetwork'] = networkUsageDf['bytesMoved'] * Config.WHPERBYTE
-    print(networkUsageDf)
     peaks = networkUsageDf[networkUsageDf['eNetwork'] > 0].resample('D')['eNetwork'].max()
     valleys = networkUsageDf[networkUsageDf['eNetwork'] > 0].resample('D')['eNetwork'].min()
-    avgMax = np.median(peaks)
-    avgMin = np.median(valleys)
-    print(avgMin, avgMax)
+    avgMax = np.nanmedian(peaks)
+    avgMin = np.nanmedian(valleys)
+    # print(peaks)
     networkUsageDf['mu'] = 1 - (1 - Config.MU) * (networkUsageDf['eNetwork'] - avgMin ) / avgMax
     networkUsageDf.loc[networkUsageDf['eNetwork'] < avgMin, 'mu'] = Config.MU
     networkUsageDf.loc[networkUsageDf['mu'] < Config.MU, 'mu'] = Config.MU
-    networkUsageDf.loc[networkUsageDf['mu'] > 1, 'mu'] = 1  
+    networkUsageDf.loc[networkUsageDf['mu'] > 1, 'mu'] = 1
     networkUsageDf['eNetworkStatic'] = avgMax * Config.MU + backupNetworkEquipmentPowerUsage / amountNetworkIsSharedBy
     networkUsageDf['eNetworkDynamic'] = (1 - networkUsageDf['mu']) * networkUsageDf['eNetwork']
     networkUsageDf['eNetworkCalculatedWithConstant'] = networkUsageDf['eNetwork']
     networkUsageDf['eNetwork'] =  networkUsageDf['eNetworkStatic'] + networkUsageDf['eNetworkDynamic']
 
-    print(networkUsageDf)
     return networkUsageDf
 
 def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
@@ -117,7 +115,6 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
                 totalNetworkUsageDf['bytesMoved'] += networkUsageDf['bytesMoved']
 
     result = result.join(totalNetworkUsageDf)
-    print(result)
 
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
     result['nu'] = (result['eServerStatic'] + result['eNetworkStatic']) / (result['eServer'] + result['eNetwork'])
@@ -147,7 +144,7 @@ def calculate(serverInfo : dict) -> DataFrame:
     #divide it by 1000 to translate from kwh to wh
     carbonIntensityDf['ci'] = carbonIntensityDf['London'] / 1000
     # carbonIntensityDf = carbonIntensityDf.set_index('time')
-    carbonIntensityDf = carbonIntensityDf.resample('60min', on='time').mean()
+    carbonIntensityDf = carbonIntensityDf.resample('60min', on='time').mean(numeric_only=True)
     carbonIntensityDf = carbonIntensityDf[['ci']]
     result = result.join(carbonIntensityDf)
 
