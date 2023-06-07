@@ -73,7 +73,7 @@ def calculateNetworkEnergyConsumption(filename : str, amountNetworkIsSharedBy : 
     networkUsageDf['mu'] = 1 - (1 - Config.MU) * (networkUsageDf['eNetwork'] - avgMin ) / avgMax
     networkUsageDf.loc[networkUsageDf['eNetwork'] < avgMin, 'mu'] = Config.MU
     networkUsageDf.loc[networkUsageDf['mu'] < Config.MU, 'mu'] = Config.MU
-    networkUsageDf.loc[networkUsageDf['mu'] > 1, 'mu'] = 1
+    networkUsageDf.loc[networkUsageDf['mu'] > 1, 'mu'] = 1  
     networkUsageDf['eNetworkStatic'] = avgMax * Config.MU + backupNetworkEquipmentPowerUsage / amountNetworkIsSharedBy
     networkUsageDf['eNetworkDynamic'] = (1 - networkUsageDf['mu']) * networkUsageDf['eNetwork']
     networkUsageDf['eNetworkCalculatedWithConstant'] = networkUsageDf['eNetwork']
