@@ -21,8 +21,8 @@ with open(path.join(Config.DATAPATH, 'serverInfo.json'), encoding='utf-8') as f:
     data = json.load(f)
 
 # print(data)
-Dijkstra1WBA.start(data)
-# Dijkstra2Cisco.start(ciscoData)
+# Dijkstra1WBA.start(data)
+Dijkstra2Cisco.start(ciscoData)
 # calculateParametersOfServer(data['servers'][0])
 
 # dataPath = path.join('data', 'weekData')
