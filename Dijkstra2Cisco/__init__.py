@@ -27,6 +27,7 @@ def calculateForServer(serverInfo : dict) :
     dynamicENetwork = (1- mu) * Config.WHPERBYTE * serverInfo['networkUsageAvg'] * 60 * 60
     staticENetwork = serverInfo['networkUsageMax'] * Config.WHPERBYTE * Config.MU * 60 * 60
     result['eNetwork'] = staticENetwork + dynamicENetwork
+    result['eNetwork'] = Config.WHPERBYTE * serverInfo['networkUsageAvg'] * 60 * 60
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
 
     result['scope2E'] = result['eServer'] + result['eNetwork'] + result['eCooling']

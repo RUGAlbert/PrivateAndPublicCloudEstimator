@@ -85,10 +85,17 @@ def preprocessConcurrentUsers(serversInfo : dict) -> DataFrame:
     concurrentUserDf['time'] = concurrentUserDf['DateTime'] - timedelta(hours=serversInfo['userTZ'])
     concurrentUserDf['maxUsers'] = concurrentUserDf['Loggedin']
     concurrentUserDf = concurrentUserDf[['time', 'maxUsers']]
-    concurrentUserDf = concurrentUserDf.resample('60min', on='time').max()
-    concurrentUserDf['maxUsers'].replace(0, 1, inplace=True)
 
-    return concurrentUserDf
+    #copy for next month
+    cuNextMonthDf = concurrentUserDf.copy(deep=True)
+    cuNextMonthDf['time'] = cuNextMonthDf['time'] + timedelta(days=21)
+    cuNextMonthDf = cuNextMonthDf[cuNextMonthDf['time'] > '2023-06']
+
+    cuDf = pd.concat([concurrentUserDf, cuNextMonthDf])
+    cuDf = cuDf.resample('60min', on='time').max()
+    cuDf['maxUsers'].replace(0, 1, inplace=True)
+    print(cuDf)
+    return cuDf
 
 def calculateScore(regressor : LinearRegression, xStart : float, xEnd : float) -> float:
     """Calculates the score of the regression based on the 
@@ -167,7 +174,8 @@ def start(serversInfo : dict):
     createOutputFolder()
     # calculateConcurrentUsers(serversInfo)
     concurrentUserDf = preprocessConcurrentUsers(serversInfo)
-    # plotConccurentUsers(concurrentUserDf)
+    # print(concurrentUserDf)
+    plotConccurentUsers(concurrentUserDf)
 
 
     totalDf = DataFrame()

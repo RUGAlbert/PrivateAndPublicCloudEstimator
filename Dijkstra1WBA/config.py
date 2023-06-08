@@ -6,7 +6,7 @@ class Config():
     CARBONINTENSITY = 1.4
     WHPERBYTE = 6e-8
 
-    DATAPATH = path.join('data', 'comp', 'LARGE_FDX')
+    DATAPATH = path.join('data', 'comp', 'LARGE_TSB')
 
     ZETA_LOWER = 1
     GAMMA_LOWER = 0
