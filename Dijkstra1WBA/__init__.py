@@ -80,22 +80,17 @@ def preprocessConcurrentUsers(serversInfo : dict) -> DataFrame:
         DataFrame: the maxium concurrent users per hour
     """    
     concurrentUserDf = pd.read_csv(path.join(Config.DATAPATH, serversInfo['concurrentUsersFile']), sep=',', skiprows=1)
-    # concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%d/%m/%Y %H:%M:%S")
-    concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%Y-%m-%d %H:%M:%S")
+    if Config.useMinuteDataForPower:
+        concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%Y-%m-%d %H:%M:%S")
+    else:
+        concurrentUserDf['DateTime'] = pd.to_datetime(concurrentUserDf['Date'] + " " + concurrentUserDf['Time'], format="%d/%m/%Y %H:%M:%S")
     concurrentUserDf['time'] = concurrentUserDf['DateTime'] - timedelta(hours=serversInfo['userTZ'])
     concurrentUserDf['maxUsers'] = concurrentUserDf['Loggedin']
     concurrentUserDf = concurrentUserDf[['time', 'maxUsers']]
 
-    #copy for next month
-    cuNextMonthDf = concurrentUserDf.copy(deep=True)
-    cuNextMonthDf['time'] = cuNextMonthDf['time'] + timedelta(days=21)
-    cuNextMonthDf = cuNextMonthDf[cuNextMonthDf['time'] > '2023-06']
-
-    cuDf = pd.concat([concurrentUserDf, cuNextMonthDf])
-    cuDf = cuDf.resample('60min', on='time').max()
-    cuDf['maxUsers'].replace(0, 1, inplace=True)
-    print(cuDf)
-    return cuDf
+    concurrentUserDf = concurrentUserDf.resample('60min', on='time').max()
+    concurrentUserDf['maxUsers'].replace(0, 1, inplace=True)
+    return concurrentUserDf
 
 def calculateScore(regressor : LinearRegression, xStart : float, xEnd : float) -> float:
     """Calculates the score of the regression based on the 
@@ -113,7 +108,7 @@ def calculateScore(regressor : LinearRegression, xStart : float, xEnd : float) -
     YPred = 1/ (np.power(predictedY, 1/Config.POWERFUNCTIONFORREGRESSION))
 
     score = np.sum(YPred) / (xEnd-xStart)
-    print("Area score", score)
+    print("Area score", score[0])
     return score
 
 
@@ -157,12 +152,12 @@ def doLinearRegression(resultDf : DataFrame) -> Tuple[DataFrame, DataFrame]:
     # regressor.fit(X, Y)  # perform linear regression
     print("mSQR of ", bestScore, "for a n-value of ", Config.POWERFUNCTIONFORREGRESSION)
     predictedY = regressor.predict(X)
-    print("Coefficient", regressor.coef_)
+    # print("Coefficient", regressor.coef_)
     YPred = 1/ (np.power(predictedY, 1/Config.POWERFUNCTIONFORREGRESSION))
     calculateScore(regressor, min(X), max(X))
-    print("95 percent is less than", calculatePercentile(regressor, X, 5))
-    print("50 percent is less than", calculatePercentile(regressor, X, 50))
-    print("5 percent is less than", calculatePercentile(regressor, X, 95))
+    print("95 percent is less than", calculatePercentile(regressor, X, 5)[0][0])
+    print("50 percent is less than", calculatePercentile(regressor, X, 50)[0][0])
+    print("5 percent is less than", calculatePercentile(regressor, X, 95)[0][0])
     return X, YPred
 
 def start(serversInfo : dict):
@@ -172,10 +167,11 @@ def start(serversInfo : dict):
         serversInfo (dict): the info for all the servers
     """    
     createOutputFolder()
+    print(serversInfo)
     # calculateConcurrentUsers(serversInfo)
     concurrentUserDf = preprocessConcurrentUsers(serversInfo)
     # print(concurrentUserDf)
-    plotConccurentUsers(concurrentUserDf)
+    # plotConccurentUsers(concurrentUserDf)
 
 
     totalDf = DataFrame()
@@ -185,7 +181,7 @@ def start(serversInfo : dict):
         print(server['name'])
         emmisionsOfServer = calculateEmmisionsOfServer(server)
         resultDf = emmisionsOfServer.merge(concurrentUserDf, how='left', on='time').sort_values(by='time')
-        resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
+        # resultDf['maxUsers'] = resultDf['maxUsers'].fillna(1)
         # resultDf = resultDf[(~resultDf['maxUsers'].isna()) & (resultDf['eNetworkDynamic'] > 0)]
         resultDf = resultDf[(~resultDf['maxUsers'].isna())]
         #normalize data
@@ -206,7 +202,6 @@ def start(serversInfo : dict):
             totalDf = totalDf.add(resultDf, fill_value=0)
         totalDf[['mu', 'maxUsers', 'ci']] = resultDf[['mu', 'maxUsers', 'ci']]
         totalDf = totalDf[totalDf.index.isin(resultDf.index)]
-
 
         if False:
             #make it cummalative
@@ -233,16 +228,41 @@ def start(serversInfo : dict):
         resultDf.to_csv(csvPath, sep=';')
         # break
 
-    # totalDf['maxUsers'].dropna()
-    print(totalDf)
+    totalDf['maxUsers'].dropna(inplace=True)
+    if not Config.useMinuteDataForPower:
+        totalDf = totalDf[(totalDf.index <= '2023-04-21')]
+    # print('average', np.mean(totalDf['TCFPUpper']), np.mean(totalDf['maxUsers']))
     XPred, YPred = doLinearRegression(totalDf)
-    # _, ax = plt.subplots()
     # totalDf.plot(use_index=True, y=['scope2E'], ax = ax, ylabel="total power usage in wH", legend=False)
     # totalDf.plot(use_index=True, y=['maxUsers'], ax = ax, secondary_y = True, ylabel="max users per hour", legend=False)
-    plt.hist(totalDf['maxUsers'], bins=int((max(totalDf['maxUsers']) - min(totalDf['maxUsers']))/10))
+
+    avgEServer = np.mean(totalDf['eServerStatic'] + totalDf['eServerDynamic'])
+    avgENetwork = np.mean(totalDf['eNetworkStatic'] + totalDf['eNetworkDynamic'])
+    avgECooling = np.mean(totalDf['eCoolingStatic'] + totalDf['eCoolingDynamic'])
+    avgETotal = avgEServer + avgENetwork + avgECooling
+
+    avgEStatic = np.mean(totalDf['eServerStatic'] + totalDf['eNetworkStatic'] + totalDf['eCoolingStatic'])
+    avgEDynamic = np.mean(totalDf['eServerDynamic'] + totalDf['eNetworkDynamic'] + totalDf['eCoolingDynamic'])
+
+    print('percentages of different components: Server:', (avgEServer / avgETotal).round(2),
+          "Network:", (avgENetwork / avgETotal).round(2),
+          "Cooling:", (avgECooling / avgETotal).round(2))
+
+
+    print('percentages of static/dynamic', (avgEStatic/(avgEStatic + avgEDynamic)).round(2), (avgEDynamic/(avgEStatic + avgEDynamic)).round(2))
+
+    # plt.show()
+    # plt.hist(resultDf['TCFPUpper'])
+    totalDf['upper bound'] = resultDf['TCFPUpper']
+    totalDf['lower bound'] = resultDf['TCFPLower']
+    totalDf.plot(use_index=True, y=['TCFPUpper', 'TCFPLower'], ylabel="Energy usage in watts", legend=False)
     plt.show()
-    totalDf.plot.scatter(x='maxUsers', y='scope2EPerUser', c='DarkBlue', xlabel="amount of max users per hour", ylabel="power consumption per user in watt")
-    plt.plot(XPred, YPred, color='red')
+    # _, ax = plt.subplots()
+    # totalDf.plot.scatter(x='maxUsers', y='TCFPUpperPerUser', c='DarkBlue', ax = ax, xlabel="amount of max users per hour", ylabel="TCFP per user in grams")
+    # plt.show()
+    # plt.plot(XPred, YPred, color='red')
+    # ax.axvline(x=XPred[int(len(XPred)/100*5)], color='y')
     csvPath = path.join(Config.DATAPATH, 'output', 'total.csv')
+    totalDf = totalDf.round(2)
     totalDf.to_csv(csvPath, sep=';')
-    plt.show()
+    # plt.show()

@@ -4,6 +4,7 @@ import logging
 from os import path
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,13 @@ def wattToEServer(rawServerDf : DataFrame) -> DataFrame:
     """
     # print(rawServerDf)
     prunnedRawServerDf = rawServerDf[['Time','Platform-Curr', 'CPU-Curr', 'Mem-Curr']].copy()
+
+    # plotted = prunnedRawServerDf[(prunnedRawServerDf['Time'] > '03/27/2023 10') & (prunnedRawServerDf['Time'] < '03/27/2023 11')]
+    # plotted['minute'] = pd.to_datetime(plotted['Time'], errors='coerce').dt.minute
+    # print(plotted)
+    # plotted.plot(x='minute', y=['Platform-Curr'], xlabel="Time in minutes", ylabel="Server Watt usage", legend=False)
+    # plt.show()
+    # sys.exit()
 
     # prunnedRawServerDf.sort_index(inplace=True)
 
@@ -115,7 +123,7 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
                 totalNetworkUsageDf['bytesMoved'] += networkUsageDf['bytesMoved']
 
     result = result.join(totalNetworkUsageDf)
-
+    
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
     result['nu'] = (result['eServerStatic'] + result['eNetworkStatic']) / (result['eServer'] + result['eNetwork'])
     result['eCoolingStatic'] = result['nu'] * result['eCooling']
