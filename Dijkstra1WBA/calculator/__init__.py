@@ -40,7 +40,7 @@ def calculateEmmisionsOfServer(serverInfo : dict) -> DataFrame:
     result['TCFPLower'] = result['scope1'] + result['scope2Lower'] + result['scope3']
     result['TCFPUpper'] = result['scope1'] + result['scope2Upper'] + result['scope3']
     
-    result = result[['eNetworkCalculatedWithConstant', 'scope2E', 'mu','eCooling','eServerStatic', 'eServerDynamic', 'eNetworkStatic', 'eNetworkDynamic', 'eCoolingStatic', 'eCoolingDynamic', 'scope1', 'scope2Lower', 'scope2Upper', 'scope3', 'TCFPLower', 'TCFPUpper', 'ci']]
+    result = result[['eNetworkCalculatedWithConstant', 'eNetwork', 'scope2E', 'mu','eCooling','eServerStatic', 'eServerDynamic', 'eNetworkStatic', 'eNetworkDynamic', 'eCoolingStatic', 'eCoolingDynamic', 'scope1', 'scope2Lower', 'scope2Upper', 'scope3', 'TCFPLower', 'TCFPUpper', 'ci']]
     result.sort_index(inplace=True)
     #remove first and last since it could be that these are not full hours
     result.drop(result.tail(1).index,inplace=True)

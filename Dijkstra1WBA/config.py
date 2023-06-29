@@ -8,8 +8,8 @@ class Config():
 
     DATAPATH = path.join('data', 'monthData')
 
-    GAMMA_LOWER = 0
-    ZETA_LOWER = 1
+    GAMMA_LOWER = 1
+    ZETA_LOWER = 0
 
     GAMA_UPPER = 1
     ZETA_UPPER = 1

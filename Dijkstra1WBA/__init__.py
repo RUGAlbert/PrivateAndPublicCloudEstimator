@@ -200,10 +200,11 @@ def start(serversInfo : dict):
             totalDf = totalDf.add(resultDf[resultDf.index.isin(totalDf.index)], fill_value=0)
         else:
             totalDf = totalDf.add(resultDf, fill_value=0)
+        print(resultDf['mu'])
         totalDf[['mu', 'maxUsers', 'ci']] = resultDf[['mu', 'maxUsers', 'ci']]
         totalDf = totalDf[totalDf.index.isin(resultDf.index)]
 
-        if False:
+        if True:
             #make it cummalative
             cumDf = resultDf.groupby(resultDf.index.to_period('m')).cumsum()
             # cumDf[(cumDf['maxUsers'] > 1) & cumDf['eNetworkDynamic'] > 0].plot(use_index=True, y=['TCFPLower', 'TCFPUpper'])
@@ -221,12 +222,12 @@ def start(serversInfo : dict):
 
             # plt.get_current_fig_manager().window.wm_geometry("+0+500")
             _, ax = plt.subplots()
-            resultDf.plot(use_index=True, y=['eNetworkWithNewAlgorithm', 'eNetworkCalculatedWithConstant'], ax = ax, ylabel="total power usage in wH", legend=True)
-            resultDf.plot(use_index=True, y=['mu'], ax = ax, secondary_y = True, ylabel="max users per hour", legend=True)
+            resultDf.plot(use_index=True, y=['eNetworkCalculatedWithConstant'], ax = ax, ylabel="total power usage in wH", legend=False)
+            resultDf.plot(use_index=True, y=['mu'], ax = ax, secondary_y = True, ylabel="max users per hour", legend=False)
             plt.get_current_fig_manager().window.wm_geometry("+800+500")
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
         resultDf.to_csv(csvPath, sep=';')
-        # break
+        break
 
     totalDf['maxUsers'].dropna(inplace=True)
     if not Config.useMinuteDataForPower:
@@ -253,11 +254,12 @@ def start(serversInfo : dict):
 
     # plt.show()
     # plt.hist(resultDf['TCFPUpper'])
+    _, ax = plt.subplots()
     totalDf['upper bound'] = resultDf['TCFPUpper']
     totalDf['lower bound'] = resultDf['TCFPLower']
-    totalDf.plot(use_index=True, y=['TCFPUpper', 'TCFPLower'], ylabel="Energy usage in watts", legend=False)
+    totalDf.plot(use_index=True, ax = ax, y=['eNetworkCalculatedWithConstant', 'eNetworkStatic'], ylabel="total power usage in wH", legend=False)
+    # totalDf.plot(use_index=True, ax = ax, y=['mu'], secondary_y = True, ylabel="mu", legend=False)
     plt.show()
-    # _, ax = plt.subplots()
     # totalDf.plot.scatter(x='maxUsers', y='TCFPUpperPerUser', c='DarkBlue', ax = ax, xlabel="amount of max users per hour", ylabel="TCFP per user in grams")
     # plt.show()
     # plt.plot(XPred, YPred, color='red')
