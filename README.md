@@ -9,8 +9,12 @@ In cooperation with BT Global Services, this project continued the development o
 
 ## Usage
 
-In order to use it you have to facilitate different files.
+In order to use it you have to facilitate different files in one folder.
 An example can be seen in testdata.
+Then you have to run the following command:
+```
+python TCFPModel.py path/to/data
+```
 
 ### CI
 This is the carbon intenstiy file for the UK.
@@ -66,3 +70,39 @@ Below is an example
 * carbonIntensityFile: the file for the carbon intesntiy
 * concurrentUsersFile: the concurrent users during that time
 * userTZ: the timezone the data is in
+
+
+### output
+The output is a csv file for each server and one total.
+Each of them has the following collumns:
+
+*time: The timestamp of that moment
+*scope2E: The total scope 2 energy consumption
+*eServerStatic: the static part of the server energy consumption
+*eServerDynamic: the dynamic part of the server energy consumption
+*eNetworkStatic: the static part of the network energy consumption
+*eNetworkDynamic: the dynamic part of the network energy consumption
+*eCoolingStatic: the static part of the cooling energy consumption
+*eCoolingDynamic: the dynamic part of the cooling energy consumption
+*scope1: the Scope 1 emissions
+*scope2Lower: the lower bound of Scope 2 emissions based on the policy
+*scope2Upper: the upper bound of Scope 2 emissions based on the policy
+*scope3: the Scope 3 emissions.
+*TCFPLower: the lower bound of the total carbon footprint
+*TCFPUpper: the upper bound of the total carbon footprint
+*ci: the carbon intensity during that hour
+*maxUsers: the amount of max users
+*TCFPLowerPerUser: the lower bound of the total carbon footprint per user
+*TCFPUpperPerUser: the upper bound of the total carbon footprint per user
+*scope2EPerUser: the scope 2 energy consumption per user
+
+As well that a prompt will be given with the different UPES scores like the following:
+```
+mSQR of  0.9988614954920007 for a n-value of  1.05
+Area score 27.625588432482054
+95 percent is less than 78.89913665383224
+50 percent is less than 30.09910669661668
+5 percent is less than 12.402728049359856
+percentages of different components: Server: 0.58 Network: 0.27 Cooling: 0.16
+percentages of static/dynamic 0.85 0.15
+```
