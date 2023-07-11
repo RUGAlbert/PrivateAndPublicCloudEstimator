@@ -48,16 +48,17 @@ def wattToEServer(rawServerDf : DataFrame) -> DataFrame:
     return serverDataDf
 
 
-def calculateNetwork(filename : str, amountNetworkIsSharedBy : int) -> DataFrame:
+def calculateNetwork(datapath : str, filename : str, amountNetworkIsSharedBy : int) -> DataFrame:
     """Calculates the amount of network usage in bytes
 
     Args:
+        datapath (str) : the path to the data files
         serverInfo (dict): The dictonary with all the serverinfo
 
     Returns:
         DataFrame: returns hourly data of network usage in bytes
     """
-    networkUsageDf = pd.read_csv(path.join(Config.DATAPATH, filename), sep=',', skiprows=1)
+    networkUsageDf = pd.read_csv(path.join(datapath, filename), sep=',', skiprows=1)
     networkUsageDf['time'] = pd.to_datetime(networkUsageDf['time'], unit='s')
     # networkUsageDf = networkUsageDf[(networkUsageDf['time'] >= '2023-03-27') & (networkUsageDf['time'] <= '2023-04-04')]
     networkUsageDf = networkUsageDf.resample('60min', on='time').mean().interpolate('time')
@@ -67,8 +68,19 @@ def calculateNetwork(filename : str, amountNetworkIsSharedBy : int) -> DataFrame
     networkUsageDf = networkUsageDf[networkUsageDf['bytesMoved'] > 0]
     return networkUsageDf
 
-def calculateNetworkEnergyConsumption(filename : str, amountNetworkIsSharedBy : int, backupNetworkEquipmentPowerUsage : int):
-    networkUsageDf = calculateNetwork(filename, amountNetworkIsSharedBy)
+def calculateNetworkEnergyConsumption(datapath : str, filename : str, amountNetworkIsSharedBy : int, backupNetworkEquipmentPowerUsage : int) -> DataFrame:
+    """Calculates the network enenery consumption in a dynamic and static part
+
+    Args:
+        datapath (str): the path to the data files
+        filename (str): The dictonary with all the serverinfo
+        amountNetworkIsSharedBy (int): the amount of servers for which the network is shared by
+        backupNetworkEquipmentPowerUsage (int): the power consumption of the backup network devices
+
+    Returns:
+        Dataframe: the hourly energy consumption of the network
+    """
+    networkUsageDf = calculateNetwork(datapath, filename, amountNetworkIsSharedBy)
 
     networkUsageDf['bytesMoved'] = networkUsageDf['bytesMoved'].fillna(0)
     networkUsageDf['eNetwork'] = networkUsageDf['bytesMoved'] * Config.WHPERBYTE
@@ -82,23 +94,23 @@ def calculateNetworkEnergyConsumption(filename : str, amountNetworkIsSharedBy : 
     networkUsageDf.loc[networkUsageDf['mu'] < Config.MU, 'mu'] = Config.MU
     networkUsageDf.loc[networkUsageDf['mu'] > 1, 'mu'] = 1
     # print(networkUsageDf.loc[networkUsageDf.index > '2023-03-01','eNetwork'])
-    networkUsageDf['eNetworkStatic'] = avgMax * Config.MU 
+    networkUsageDf['eNetworkStatic'] = avgMax * Config.MU + backupNetworkEquipmentPowerUsage / amountNetworkIsSharedBy
     networkUsageDf['eNetworkDynamic'] = (1 - networkUsageDf['mu']) * networkUsageDf['eNetwork']
-    networkUsageDf['eNetworkCalculatedWithConstant'] = networkUsageDf['eNetwork']
     networkUsageDf['eNetwork'] =  networkUsageDf['eNetworkStatic'] + networkUsageDf['eNetworkDynamic']
 
     return networkUsageDf
 
-def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
+def calculateEnergyConsumption(datapath: str, serverInfo : dict) -> DataFrame:
     """Calculates the energy consumption used by the server and other sources
 
     Args:
+        datapath (str) : the path to the data files
         serverInfo (dict): The dictonary with all the serverinfo
 
     Returns:
         DataFrame: a dataframe with the hourly energy consumption
     """
-    result = pd.read_csv(path.join(Config.DATAPATH, serverInfo['powerServerFile']), sep=',', skiprows=1)
+    result = pd.read_csv(path.join(datapath, serverInfo['powerServerFile']), sep=',', skiprows=1)
     if Config.useMinuteDataForPower:
         result = wattToEServer(result)
     else:
@@ -110,11 +122,12 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
     result['eServerDynamic'] = result['eServer'] - serverInfo['energyServerStatic']
 
     totalNetworkUsageDf = None
+    #if there are more than one network device loop over all network devices
     if(isinstance(serverInfo['networkUsageFile'], str)) :
-        totalNetworkUsageDf = calculateNetworkEnergyConsumption(serverInfo['networkUsageFile'], serverInfo['amountNetworkIsSharedBy'], serverInfo['backupNetworkEquipmentPowerUsage'])
+        totalNetworkUsageDf = calculateNetworkEnergyConsumption(datapath, serverInfo['networkUsageFile'], serverInfo['amountNetworkIsSharedBy'], serverInfo['backupNetworkEquipmentPowerUsage'])
     else:
         for networkFile in serverInfo['networkUsageFile']:
-            networkUsageDf = calculateNetworkEnergyConsumption(networkFile, serverInfo['amountNetworkIsSharedBy'], serverInfo['backupNetworkEquipmentPowerUsage'])
+            networkUsageDf = calculateNetworkEnergyConsumption(datapath, networkFile, serverInfo['amountNetworkIsSharedBy'], serverInfo['backupNetworkEquipmentPowerUsage'])
             if totalNetworkUsageDf is None:
                 totalNetworkUsageDf = networkUsageDf
             else:
@@ -124,7 +137,7 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
                 totalNetworkUsageDf['bytesMoved'] += networkUsageDf['bytesMoved']
 
     result = result.join(totalNetworkUsageDf)
-    
+
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
     result['nu'] = (result['eServerStatic'] + result['eNetworkStatic']) / (result['eServer'] + result['eNetwork'])
     result['eCoolingStatic'] = result['nu'] * result['eCooling']
@@ -136,18 +149,19 @@ def calculateEnergyConsumption(serverInfo : dict) -> DataFrame:
 
     return result
 
-def calculate(serverInfo : dict) -> DataFrame:
+def calculate(datapath : str, serverInfo : dict) -> DataFrame:
     """Calculates the scope 2 emissions
 
     Args:
+        datapath (str) : the path to the data files
         serverInfo (dict): The dictonary with all the serverinfo
 
     Returns:
         DataFrame: returns the hourly scope 2 emissions data
     """
-    result = calculateEnergyConsumption(serverInfo)
+    result = calculateEnergyConsumption(datapath, serverInfo)
 
-    carbonIntensityDf =  pd.read_csv(path.join(Config.DATAPATH, serverInfo['carbonIntensityFile']), sep=',', skiprows=1)
+    carbonIntensityDf =  pd.read_csv(path.join(datapath, serverInfo['carbonIntensityFile']), sep=',', skiprows=1)
     carbonIntensityDf['time'] = pd.to_datetime(carbonIntensityDf['Datetime (UTC)']).dt.tz_localize(None)
     # print(carbonIntensityDf.columns)
     #divide it by 1000 to translate from kwh to wh

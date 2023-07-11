@@ -16,10 +16,11 @@ def calculateMultitenancyShare(serverInfo : dict, monthlyPowerConsumption : floa
     """    
     return (monthlyPowerConsumption * avgCarbonIntensity) / serverInfo['DCEmissions']['scope2']
 
-def calculateEmmisionsOfServer(serverInfo : dict) -> DataFrame:
+def calculateEmmisionsOfServer(datapath: str, serverInfo : dict) -> DataFrame:
     """Calculates the emissions of the server. 
 
     Args:
+        datapath (str) : the path to the data files
         serverInfo (dict): The dictonary with all the serverinfo
 
     Returns:
@@ -27,7 +28,7 @@ def calculateEmmisionsOfServer(serverInfo : dict) -> DataFrame:
     """    
     # scopes energy
     # calculate scope 2 energy usage
-    result = scope2.calculate(serverInfo)
+    result = scope2.calculate(datapath, serverInfo)
     monthlyPowerConsumption = result['scope2E'].mean() * 24*365/12
     avgCarbonIntensity = result['ci'].mean()
 
@@ -40,7 +41,7 @@ def calculateEmmisionsOfServer(serverInfo : dict) -> DataFrame:
     result['TCFPLower'] = result['scope1'] + result['scope2Lower'] + result['scope3']
     result['TCFPUpper'] = result['scope1'] + result['scope2Upper'] + result['scope3']
     
-    result = result[['eNetworkCalculatedWithConstant', 'eNetwork', 'scope2E', 'mu','eCooling','eServerStatic', 'eServerDynamic', 'eNetworkStatic', 'eNetworkDynamic', 'eCoolingStatic', 'eCoolingDynamic', 'scope1', 'scope2Lower', 'scope2Upper', 'scope3', 'TCFPLower', 'TCFPUpper', 'ci']]
+    result = result[['scope2E','eServerStatic', 'eServerDynamic', 'eNetworkStatic', 'eNetworkDynamic', 'eCoolingStatic', 'eCoolingDynamic', 'scope1', 'scope2Lower', 'scope2Upper', 'scope3', 'TCFPLower', 'TCFPUpper', 'ci']]
     result.sort_index(inplace=True)
     #remove first and last since it could be that these are not full hours
     result.drop(result.tail(1).index,inplace=True)
