@@ -171,7 +171,7 @@ def start(serversInfo : dict):
     # calculateConcurrentUsers(serversInfo)
     concurrentUserDf = preprocessConcurrentUsers(serversInfo)
     # print(concurrentUserDf)
-    # plotConccurentUsers(concurrentUserDf)
+    plotConccurentUsers(concurrentUserDf)
 
 
     totalDf = DataFrame()
@@ -200,7 +200,7 @@ def start(serversInfo : dict):
             totalDf = totalDf.add(resultDf[resultDf.index.isin(totalDf.index)], fill_value=0)
         else:
             totalDf = totalDf.add(resultDf, fill_value=0)
-        print(resultDf['mu'])
+        # print(resultDf['mu'])
         totalDf[['mu', 'maxUsers', 'ci']] = resultDf[['mu', 'maxUsers', 'ci']]
         totalDf = totalDf[totalDf.index.isin(resultDf.index)]
 
@@ -227,7 +227,7 @@ def start(serversInfo : dict):
             plt.get_current_fig_manager().window.wm_geometry("+800+500")
         csvPath = path.join(Config.DATAPATH, 'output', server['name'] + '.csv')
         resultDf.to_csv(csvPath, sep=';')
-        break
+        # break
 
     totalDf['maxUsers'].dropna(inplace=True)
     if not Config.useMinuteDataForPower:
@@ -254,16 +254,16 @@ def start(serversInfo : dict):
 
     # plt.show()
     # plt.hist(resultDf['TCFPUpper'])
-    # _, ax = plt.subplots()
-    # totalDf['upper bound'] = resultDf['TCFPUpper']
-    # totalDf['lower bound'] = resultDf['TCFPLower']
-    totalDf.plot(use_index=True, y=['eNetworkCalculatedWithConstant', 'eNetworkDynamic'], ylabel="total power usage in wH", legend=False)
-    totalDf.plot(use_index=True, y=['eNetworkCalculatedWithConstant', 'eNetwork'], ylabel="total power usage in wH", legend=False)
-    # totalDf.plot(use_index=True, ax = ax, y=['mu'], secondary_y = True, ylabel="mu", legend=False)
-    plt.show()
-    # totalDf.plot.scatter(x='maxUsers', y='TCFPUpperPerUser', c='DarkBlue', ax = ax, xlabel="amount of max users per hour", ylabel="TCFP per user in grams")
+    _, ax = plt.subplots()
+    # totalDf['Concurrent users'] = resultDf['maxUsers']
+    # totalDf['Total energy consumption'] = totalDf['scope2E']
+    # totalDf.plot(use_index=True, y=['Concurrent users'],  ylabel="max concurrent users per hour", legend=False)
+    # totalDf.plot(use_index=True, ax = ax, y=['Total energy consumption'], ylabel="total power usage in wH", legend=True)
+    # totalDf.plot(use_index=True, ax = ax, y=['Concurrent users'], secondary_y = True, ylabel="max concurrent users per hour", legend=True)
     # plt.show()
-    # plt.plot(XPred, YPred, color='red')
+    totalDf.plot.scatter(x='maxUsers', y='scope2EPerUser', c='DarkBlue', ax = ax, xlabel="amount of max users per hour", ylabel="TCFP per user in grams")
+    plt.plot(XPred, YPred, color='red')
+    plt.show()
     # ax.axvline(x=XPred[int(len(XPred)/100*5)], color='y')
     csvPath = path.join(Config.DATAPATH, 'output', 'total.csv')
     totalDf = totalDf.round(2)

@@ -1,4 +1,5 @@
 from os import path
+import matplotlib.pyplot as plt
 
 import pandas as pd
 
@@ -29,6 +30,9 @@ def calculateForServer(serverInfo : dict) :
     result['eNetwork'] = staticENetwork + dynamicENetwork
     # result['eNetwork'] = Config.WHPERBYTE * serverInfo['networkUsageAvg'] * 60 * 60
     result['eCooling'] = (serverInfo['PUE'] - 1) * (result['eServer'] + result['eNetwork'])
+
+    result.plot(use_index=True, y='tenantEnergy', ylabel="Server power usage in Watts")
+    plt.show()
 
     result['scope2E'] = result['eServer'] + result['eNetwork'] + result['eCooling']
     result = result.round(2)

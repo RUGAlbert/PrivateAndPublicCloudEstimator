@@ -76,12 +76,12 @@ def calculateNetworkEnergyConsumption(filename : str, amountNetworkIsSharedBy : 
     valleys = networkUsageDf[networkUsageDf['eNetwork'] > 0].resample('D')['eNetwork'].min()
     avgMax = np.nanmedian(peaks)
     avgMin = np.nanmedian(valleys)
-    print(peaks, valleys)
+    # print(peaks, valleys)
     networkUsageDf['mu'] = 1 - (1 - Config.MU) * (networkUsageDf['eNetwork'] - avgMin ) / avgMax
     networkUsageDf.loc[networkUsageDf['eNetwork'] < avgMin, 'mu'] = 1
     networkUsageDf.loc[networkUsageDf['mu'] < Config.MU, 'mu'] = Config.MU
     networkUsageDf.loc[networkUsageDf['mu'] > 1, 'mu'] = 1
-    print(networkUsageDf.loc[networkUsageDf.index > '2023-03-01','eNetwork'])
+    # print(networkUsageDf.loc[networkUsageDf.index > '2023-03-01','eNetwork'])
     networkUsageDf['eNetworkStatic'] = avgMax * Config.MU 
     networkUsageDf['eNetworkDynamic'] = (1 - networkUsageDf['mu']) * networkUsageDf['eNetwork']
     networkUsageDf['eNetworkCalculatedWithConstant'] = networkUsageDf['eNetwork']
