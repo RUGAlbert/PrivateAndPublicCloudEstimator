@@ -32,7 +32,7 @@ It always follows the same structure.
 
 Below is an example
 
-'''
+```
 "servers": [
         {
             "name": "London",
@@ -53,7 +53,7 @@ Below is an example
     "concurrentUsersFile":"concurrentUser2.csv",
     "userTZ":1
 }
-'''
+```
 
 * name: The name is the way you want to label it
 * DCEmissions: The datacenter emissions split into the different scopes
