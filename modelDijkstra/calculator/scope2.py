@@ -1,15 +1,14 @@
 
-from random import randint
-import logging
+"""
+The calculation to estimate the scope 2 emissions
+"""
 from os import path
-import sys
-import numpy as np
-import matplotlib.pyplot as plt
 
 import numpy as np
 import pandas as pd
-from ..config import Config
 from pandas import DataFrame
+
+from ..config import Config
 
 
 def wattToEServer(rawServerDf : DataFrame) -> DataFrame:

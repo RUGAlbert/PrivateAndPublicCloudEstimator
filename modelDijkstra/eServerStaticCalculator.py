@@ -1,11 +1,16 @@
+"""
+If necessary these scripts can be used to help determine the static power consumption
+of the server
+"""
+
 from os import path
 
 import pandas as pd
 from pandas import DataFrame
-from .config import Config
-from .calculator.scope2 import wattToEServer
 from sklearn import linear_model
-import logging
+
+from .calculator.scope2 import wattToEServer
+
 
 def readServerStatistics(datapath : str) -> DataFrame:
     """Reads the server statistics needed for the determination
@@ -53,7 +58,7 @@ def calculateParametersOfServer(datapath: str, serverInfo : dict) -> None:
     print(statsDf)
 
     regr = linear_model.LinearRegression()
-    #mem is  aproblem
+    
     regr.fit(statsDf[['cpu']], statsDf['eServer'])
     print(regr.intercept_)
     print(regr.coef_)
