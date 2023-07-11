@@ -1,0 +1,21 @@
+{
+    "servers": [
+        {
+            "name": "London",
+            "DCEmissions": {
+                "scope1": 0,
+                "scope2":2857142856,
+                "scope3": 846492
+            },
+            "PUE": 1.2,
+            "energyServerStatic":238.4,
+            "amountNetworkIsSharedBy":1,
+            "backupNetworkEquipmentPowerUsage":85,
+            "powerServerFile": "LondenUsage.csv",
+            "networkUsageFile": "networkusage_LON.csv",
+            "carbonIntensityFile": "CI.csv"
+        }
+    ],
+    "concurrentUsersFile":"concurrentUser2.csv",
+    "userTZ":1
+}

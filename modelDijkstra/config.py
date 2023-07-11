@@ -24,4 +24,4 @@ class Config():
     PWRFUNCREGMIN = 1
     PWRFUNCREGMAX = 2
 
-    useMinuteDataForPower = True
+    useMinuteDataForPower = False
