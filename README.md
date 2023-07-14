@@ -9,6 +9,8 @@ In cooperation with BT Global Services, this project continued the development o
 
 ## Usage
 
+Before using the software first you will have to create a virtual environment and install all the packages in requirements.txt.
+
 In order to use it you have to facilitate different files in one folder.
 An example can be seen in testdata.
 Then you have to run the following command:
@@ -25,6 +27,7 @@ The maximum concurrent users on an half hour basis
 
 ### LondenUsage
 The server watt usage on a hourly basis
+If this is however on a minutely basis the 'useMinuteDataForPower' in config has to be set to true.
 
 ### Networkusage
 The network usage in bytes per second
